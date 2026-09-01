@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:5000/api/sales";
+const API_URL = "https://vraj-creation.onrender.com/api/sales";;
 
 const SalesPage = () => {
   const [selectedPlatform, setSelectedPlatform] = useState("meesho");
