@@ -76,11 +76,9 @@ const Products = () => {
       return image;
     }
 
-    const baseURL =
-      api.defaults.baseURL?.replace("/api", "") ||
-      "http://localhost:5000";
+   const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, "");
 
-    return `${baseURL}${image}`;
+return `${baseURL}${image}`;
   };
 
   // =====================================================

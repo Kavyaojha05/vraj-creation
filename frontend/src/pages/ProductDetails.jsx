@@ -20,7 +20,7 @@ const ProductDetails = () => {
       return image;
     }
 
-    return `http://localhost:5000${image}`;
+    return `https://vraj-creation.onrender.com${image}`;
   };
 
   const fetchProducts = async () => {

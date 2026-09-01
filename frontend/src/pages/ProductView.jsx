@@ -20,8 +20,7 @@ const ProductView = () => {
     if (image.startsWith("http")) {
       return image;
     }
-
-    return `http://localhost:5000${image}`;
+return `https://vraj-creation.onrender.com${image}`;
   };
 
   // ==========================================
