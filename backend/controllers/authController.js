@@ -47,13 +47,24 @@ const register = async (req, res) => {
     const existingUser = await User.findOne({
       email: cleanEmail,
     });
-
+    console.log("REGISTER EMAIL:", cleanEmail);
+console.log("MONGO DATABASE:", User.db.name);
+console.log(
+  "EXISTING USER:",
+  existingUser
+    ? {
+        id: existingUser._id,
+        email: existingUser.email,
+      }
+    : null
+);
     if (existingUser) {
       return res.status(400).json({
         success: false,
         message: "User already exists",
       });
     }
+    
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
