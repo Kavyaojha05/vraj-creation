@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import html2pdf from "html2pdf.js";
 
-const API_URL = "http://localhost:5000/api/purchases";
+const API_URL = "https://vraj-creation.onrender.com/api/purchases";
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/80";
 
