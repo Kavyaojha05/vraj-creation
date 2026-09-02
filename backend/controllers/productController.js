@@ -1,6 +1,5 @@
 
-const Product = require("../models/Product");
-
+  const Product = require("../models/Product");
 // =====================================================
 // GET ALL PRODUCTS
 // =====================================================
@@ -33,9 +32,7 @@ const getProducts = async (req, res) => {
 
 const getProduct = async (req, res) => {
   try {
-    const product = await Product.findById(
-      req.params.id
-    );
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -89,23 +86,15 @@ const createProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Required product fields are missing",
+        message: "Required product fields are missing",
       });
     }
 
     // Convert numbers
-    const purchasePriceNumber =
-      Number(purchasePrice);
-
-    const sellingPriceNumber =
-      Number(sellingPrice);
-
+    const purchasePriceNumber = Number(purchasePrice);
+    const sellingPriceNumber = Number(sellingPrice);
     const stockNumber = Number(stock || 0);
-
-    const minimumStockNumber = Number(
-      minimumStock || 5
-    );
+    const minimumStockNumber = Number(minimumStock || 5);
 
     // Validate numbers
     if (
@@ -116,8 +105,7 @@ const createProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Price and stock must be valid numbers",
+        message: "Price and stock must be valid numbers",
       });
     }
 
@@ -130,21 +118,17 @@ const createProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Price and stock cannot be negative",
+        message: "Price and stock cannot be negative",
       });
     }
 
     // Clean SKU
-    const cleanSku = sku
-      .trim()
-      .toUpperCase();
+    const cleanSku = sku.trim().toUpperCase();
 
     // Check duplicate SKU
-    const existingProduct =
-      await Product.findOne({
-        sku: cleanSku,
-      });
+    const existingProduct = await Product.findOne({
+      sku: cleanSku,
+    });
 
     if (existingProduct) {
       return res.status(400).json({
@@ -154,13 +138,13 @@ const createProduct = async (req, res) => {
     }
 
     // =================================================
-    // IMAGE
+    // IMAGE - CLOUDINARY
     // =================================================
 
     let image = "";
 
     if (req.file) {
-      image = `/uploads/products/${req.file.filename}`;
+      image = req.file.path;
     }
 
     // =================================================
@@ -174,43 +158,32 @@ const createProduct = async (req, res) => {
 
       category: category.trim(),
 
-      subcategory:
-        subcategory?.trim() || "",
+      subcategory: subcategory?.trim() || "",
 
       image,
 
-      description:
-        description?.trim() || "",
+      description: description?.trim() || "",
 
-      purchasePrice:
-        purchasePriceNumber,
+      purchasePrice: purchasePriceNumber,
 
-      sellingPrice:
-        sellingPriceNumber,
+      sellingPrice: sellingPriceNumber,
 
       stock: stockNumber,
 
-      minimumStock:
-        minimumStockNumber,
+      minimumStock: minimumStockNumber,
 
-      supplier:
-        supplier?.trim() || "",
+      supplier: supplier?.trim() || "",
 
       status: status || "active",
     });
 
     res.status(201).json({
       success: true,
-      message:
-        "Product created successfully",
-
+      message: "Product created successfully",
       product,
     });
   } catch (error) {
-    console.error(
-      "CREATE PRODUCT ERROR:",
-      error
-    );
+    console.error("CREATE PRODUCT ERROR:", error);
 
     // Duplicate key safety
     if (error.code === 11000) {
@@ -234,10 +207,7 @@ const createProduct = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   try {
-    const product =
-      await Product.findById(
-        req.params.id
-      );
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -265,24 +235,20 @@ const updateProduct = async (req, res) => {
     // =================================================
 
     if (sku) {
-      const cleanSku = sku
-        .trim()
-        .toUpperCase();
+      const cleanSku = sku.trim().toUpperCase();
 
       if (cleanSku !== product.sku) {
-        const skuExists =
-          await Product.findOne({
-            sku: cleanSku,
-            _id: {
-              $ne: product._id,
-            },
-          });
+        const skuExists = await Product.findOne({
+          sku: cleanSku,
+          _id: {
+            $ne: product._id,
+          },
+        });
 
         if (skuExists) {
           return res.status(400).json({
             success: false,
-            message:
-              "SKU already exists",
+            message: "SKU already exists",
           });
         }
 
@@ -300,8 +266,7 @@ const updateProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Purchase price cannot be negative",
+        message: "Purchase price cannot be negative",
       });
     }
 
@@ -311,8 +276,7 @@ const updateProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Selling price cannot be negative",
+        message: "Selling price cannot be negative",
       });
     }
 
@@ -322,8 +286,7 @@ const updateProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Stock cannot be negative",
+        message: "Stock cannot be negative",
       });
     }
 
@@ -333,8 +296,7 @@ const updateProduct = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Minimum stock cannot be negative",
+        message: "Minimum stock cannot be negative",
       });
     }
 
@@ -343,72 +305,60 @@ const updateProduct = async (req, res) => {
     // =================================================
 
     product.name =
-      name?.trim() ??
-      product.name;
+      name?.trim() ?? product.name;
 
     product.category =
-      category?.trim() ??
-      product.category;
+      category?.trim() ?? product.category;
 
     product.subcategory =
-      subcategory?.trim() ??
-      product.subcategory;
+      subcategory?.trim() ?? product.subcategory;
 
     product.description =
-      description?.trim() ??
-      product.description;
+      description?.trim() ?? product.description;
 
     if (purchasePrice !== undefined) {
-      product.purchasePrice =
-        Number(purchasePrice);
+      product.purchasePrice = Number(purchasePrice);
     }
 
     if (sellingPrice !== undefined) {
-      product.sellingPrice =
-        Number(sellingPrice);
+      product.sellingPrice = Number(sellingPrice);
     }
 
     if (stock !== undefined) {
-      product.stock =
-        Number(stock);
+      product.stock = Number(stock);
     }
 
     if (minimumStock !== undefined) {
-      product.minimumStock =
-        Number(minimumStock);
+      product.minimumStock = Number(minimumStock);
     }
 
     product.supplier =
-      supplier?.trim() ??
-      product.supplier;
+      supplier?.trim() ?? product.supplier;
 
     product.status =
-      status ??
-      product.status;
+      status ?? product.status;
 
     // =================================================
-    // NEW IMAGE
+    // NEW IMAGE - CLOUDINARY
     // =================================================
 
     if (req.file) {
-      product.image =
-        `/uploads/products/${req.file.filename}`;
+      product.image = req.file.path;
     }
 
-    // Save
+    // =================================================
+    // SAVE
+    // =================================================
+
     await product.save();
 
     res.json({
       success: true,
-      message:
-        "Product updated successfully",
+      message: "Product updated successfully",
       product,
     });
   } catch (error) {
-    console.error(
-      "UPDATE PRODUCT ERROR:",
-      error
-    );
+    console.error("UPDATE PRODUCT ERROR:", error);
 
     if (error.code === 11000) {
       return res.status(400).json({
@@ -419,8 +369,7 @@ const updateProduct = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message:
-        "Failed to update product",
+      message: "Failed to update product",
       error: error.message,
     });
   }
@@ -432,10 +381,7 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   try {
-    const product =
-      await Product.findById(
-        req.params.id
-      );
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -448,19 +394,14 @@ const deleteProduct = async (req, res) => {
 
     res.json({
       success: true,
-      message:
-        "Product deleted successfully",
+      message: "Product deleted successfully",
     });
   } catch (error) {
-    console.error(
-      "DELETE PRODUCT ERROR:",
-      error
-    );
+    console.error("DELETE PRODUCT ERROR:", error);
 
     res.status(500).json({
       success: false,
-      message:
-        "Failed to delete product",
+      message: "Failed to delete product",
       error: error.message,
     });
   }

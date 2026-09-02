@@ -65,22 +65,21 @@ const Products = () => {
   // =====================================================
   // IMAGE URL
   // =====================================================
+const getImageUrl = (image) => {
+  if (!image) return "";
 
-  const getImageUrl = (image) => {
-    if (!image) return "";
+  // Already complete URL
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
 
-    if (
-      image.startsWith("http://") ||
-      image.startsWith("https://")
-    ) {
-      return image;
-    }
+  const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, "");
 
-   const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, "");
+  // Ensure / between domain and image path
+  const imagePath = image.startsWith("/") ? image : `/${image}`;
 
-return `${baseURL}${image}`;
-  };
-
+  return `${baseURL}${imagePath}`;
+};
   // =====================================================
   // DELETE PRODUCT
   // =====================================================

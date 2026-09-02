@@ -15,13 +15,23 @@ const ProductView = () => {
   // ==========================================
 
   const getImageUrl = (image) => {
-    if (!image) return "";
+  if (!image) return "";
 
-    if (image.startsWith("http")) {
-      return image;
-    }
-return `https://vraj-creation.onrender.com${image}`;
-  };
+  // Already full URL
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  // Remove extra spaces
+  const imagePath = image.trim();
+
+  // Make sure path starts with /
+  const path = imagePath.startsWith("/")
+    ? imagePath
+    : `/${imagePath}`;
+
+  return `https://vraj-creation.onrender.com${path}`;
+};
 
   // ==========================================
   // FETCH PRODUCT

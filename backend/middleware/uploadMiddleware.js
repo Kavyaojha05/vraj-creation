@@ -1,33 +1,20 @@
 
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
 
-const uploadDir = path.join(
-  __dirname,
-  "../uploads/products"
-);
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
 
-// Folder नहीं है तो automatically create होगा
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, {
-    recursive: true,
-  });
-}
+  params: {
+    folder: "vraj-creation/products",
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-
-  filename: (req, file, cb) => {
-    const uniqueName =
-      Date.now() +
-      "-" +
-      Math.round(Math.random() * 1e9) +
-      path.extname(file.originalname);
-
-    cb(null, uniqueName);
+    allowed_formats: [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+    ],
   },
 });
 
