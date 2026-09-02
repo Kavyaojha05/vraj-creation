@@ -6,6 +6,12 @@ const API_URL = "https://vraj-creation.onrender.com/api/purchases";
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/80";
 
+const INPUT_CLASS =
+    "w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-medium text-slate-900 caret-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:text-slate-900 focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:caret-white dark:placeholder:text-slate-500 dark:focus:border-white dark:focus:bg-slate-800 dark:focus:text-white";
+
+const FILE_INPUT_CLASS =
+    "w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-xs file:font-bold file:text-slate-800 dark:file:bg-slate-700 dark:file:text-white";
+
 const getToday = () => {
     return new Date().toISOString().split("T")[0];
 };
@@ -18,32 +24,35 @@ const createInitialForm = () => ({
     supplierName: "",
     quantity: 1,
     productImage: "",
+    imageFile: null,
 });
 
+const escapeHtml = (value) => {
+    return String(value ?? "-")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
 const PurchasePage = () => {
-    // ==========================================
-    // STATES
-    // ==========================================
-
     const [purchases, setPurchases] = useState([]);
-
     const [searchTerm, setSearchTerm] = useState("");
-
     const [isModalOpen, setIsModalOpen] = useState(false);
-
     const [editingId, setEditingId] = useState(null);
 
-    const [formData, setFormData] = useState(createInitialForm());
+    const [formData, setFormData] = useState(
+        createInitialForm()
+    );
 
     const [loading, setLoading] = useState(true);
-
     const [saving, setSaving] = useState(false);
-
     const [error, setError] = useState("");
 
-    // ==========================================
-    // GET PURCHASES FROM MONGODB
-    // ==========================================
+    // =====================================================
+    // FETCH PURCHASES
+    // =====================================================
 
     const fetchPurchases = async () => {
         try {
@@ -54,35 +63,40 @@ const PurchasePage = () => {
 
             if (Array.isArray(response.data)) {
                 setPurchases(response.data);
+            } else if (
+                Array.isArray(response.data?.purchases)
+            ) {
+                setPurchases(response.data.purchases);
             } else {
                 setPurchases([]);
             }
         } catch (error) {
-            console.error("FETCH PURCHASES ERROR:", error);
+            console.error(
+                "FETCH PURCHASES ERROR:",
+                error
+            );
 
             setError(
                 error.response?.data?.message ||
-                "Purchase data load nahi ho raha."
+                    "Purchase data load nahi ho raha."
             );
         } finally {
             setLoading(false);
         }
     };
 
-    // ==========================================
-    // LOAD DATA WHEN PAGE OPENS
-    // ==========================================
-
     useEffect(() => {
         fetchPurchases();
     }, []);
 
-    // ==========================================
+    // =====================================================
     // SEARCH
-    // ==========================================
+    // =====================================================
 
     const filteredPurchases = useMemo(() => {
-        const search = searchTerm.trim().toLowerCase();
+        const search = searchTerm
+            .trim()
+            .toLowerCase();
 
         if (!search) {
             return purchases;
@@ -93,11 +107,9 @@ const PurchasePage = () => {
                 String(item.productName || "")
                     .toLowerCase()
                     .includes(search) ||
-
                 String(item.productId || "")
                     .toLowerCase()
                     .includes(search) ||
-
                 String(item.supplierName || "")
                     .toLowerCase()
                     .includes(search)
@@ -105,9 +117,9 @@ const PurchasePage = () => {
         });
     }, [purchases, searchTerm]);
 
-    // ==========================================
+    // =====================================================
     // CALCULATIONS
-    // ==========================================
+    // =====================================================
 
     const calculateTotalPurchaseCost = (item) => {
         const cost = Number(item.rawCost) || 0;
@@ -127,22 +139,25 @@ const PurchasePage = () => {
     const totalRawExpense = useMemo(() => {
         return filteredPurchases.reduce(
             (total, item) =>
-                total + calculateTotalPurchaseCost(item),
+                total +
+                calculateTotalPurchaseCost(item),
             0
         );
     }, [filteredPurchases]);
 
-    // ==========================================
-    // FORMAT CURRENCY
-    // ==========================================
+    // =====================================================
+    // CURRENCY
+    // =====================================================
 
     const formatCurrency = (value) => {
-        return `₹${Number(value || 0).toLocaleString("en-IN")}`;
+        return `₹${Number(value || 0).toLocaleString(
+            "en-IN"
+        )}`;
     };
 
-    // ==========================================
+    // =====================================================
     // OPEN ADD MODAL
-    // ==========================================
+    // =====================================================
 
     const handleOpenAddModal = () => {
         setEditingId(null);
@@ -151,30 +166,32 @@ const PurchasePage = () => {
         setIsModalOpen(true);
     };
 
-    // ==========================================
+    // =====================================================
     // OPEN EDIT MODAL
-    // ==========================================
+    // =====================================================
 
     const handleOpenEditModal = (item) => {
         setEditingId(item._id);
 
         setFormData({
             productId: item.productId || "",
-            purchaseDate: item.purchaseDate || getToday(),
+            purchaseDate:
+                item.purchaseDate || getToday(),
             productName: item.productName || "",
             rawCost: item.rawCost ?? "",
             supplierName: item.supplierName || "",
             quantity: item.quantity ?? 1,
             productImage: item.productImage || "",
+            imageFile: null,
         });
 
         setError("");
         setIsModalOpen(true);
     };
 
-    // ==========================================
+    // =====================================================
     // CLOSE MODAL
-    // ==========================================
+    // =====================================================
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
@@ -184,9 +201,9 @@ const PurchasePage = () => {
         setSaving(false);
     };
 
-    // ==========================================
+    // =====================================================
     // INPUT CHANGE
-    // ==========================================
+    // =====================================================
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -197,9 +214,9 @@ const PurchasePage = () => {
         }));
     };
 
-    // ==========================================
-    // IMAGE UPLOAD
-    // ==========================================
+    // =====================================================
+    // IMAGE CHANGE
+    // =====================================================
 
     const handleImageFileChange = (e) => {
         const file = e.target.files?.[0];
@@ -207,36 +224,50 @@ const PurchasePage = () => {
         if (!file) return;
 
         if (!file.type.startsWith("image/")) {
-            setError("Please select a valid image file.");
+            setError(
+                "Please select a valid image file."
+            );
+
+            e.target.value = "";
             return;
         }
 
-        if (file.size > 2 * 1024 * 1024) {
-            setError("Image size should be less than 2 MB.");
+        if (file.size > 5 * 1024 * 1024) {
+            setError(
+                "Image size should be less than 5 MB."
+            );
+
+            e.target.value = "";
             return;
         }
 
-        const reader = new FileReader();
+        const previewUrl =
+            URL.createObjectURL(file);
 
-        reader.onloadend = () => {
-            setFormData((prev) => ({
-                ...prev,
-                productImage: reader.result,
-            }));
+        setFormData((prev) => ({
+            ...prev,
+            productImage: previewUrl,
+            imageFile: file,
+        }));
 
-            setError("");
-        };
-
-        reader.onerror = () => {
-            setError("Unable to read image file.");
-        };
-
-        reader.readAsDataURL(file);
+        setError("");
     };
 
-    // ==========================================
+    // =====================================================
+    // REMOVE IMAGE
+    // =====================================================
+
+    const handleRemoveImage = () => {
+        setFormData((prev) => ({
+            ...prev,
+            productImage: "",
+            imageFile: null,
+        }));
+    };
+
+    // =====================================================
     // DELETE PURCHASE
-    // ==========================================
+    // =====================================================
 
     const handleDelete = async (id) => {
         const confirmed = window.confirm(
@@ -248,31 +279,39 @@ const PurchasePage = () => {
         try {
             setError("");
 
-            await axios.delete(`${API_URL}/${id}`);
+            await axios.delete(
+                `${API_URL}/${id}`
+            );
 
             setPurchases((prev) =>
-                prev.filter((item) => item._id !== id)
+                prev.filter(
+                    (item) => item._id !== id
+                )
             );
         } catch (error) {
-            console.error("DELETE PURCHASE ERROR:", error);
+            console.error(
+                "DELETE PURCHASE ERROR:",
+                error
+            );
 
             setError(
                 error.response?.data?.message ||
-                "Purchase delete nahi ho pa raha."
+                    "Purchase delete nahi ho pa raha."
             );
         }
     };
 
-    // ==========================================
-    // ADD / UPDATE PURCHASE
-    // ==========================================
+    // =====================================================
+    // CREATE / UPDATE PURCHASE
+    // =====================================================
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         setError("");
 
-        const productId = formData.productId.trim();
+        const productId =
+            formData.productId.trim();
 
         const productName =
             formData.productName.trim();
@@ -280,26 +319,41 @@ const PurchasePage = () => {
         const supplierName =
             formData.supplierName.trim();
 
-        const rawCost = Number(formData.rawCost);
+        const rawCost =
+            Number(formData.rawCost);
 
-        const quantity = Number(formData.quantity);
+        const quantity =
+            Number(formData.quantity);
 
-        // ======================================
+        // =================================================
         // VALIDATION
-        // ======================================
+        // =================================================
 
-        if (!productId || !productName || !supplierName) {
-            setError("Please fill all required fields.");
+        if (
+            !productId ||
+            !productName ||
+            !supplierName
+        ) {
+            setError(
+                "Please fill all required fields."
+            );
             return;
         }
 
         if (!formData.purchaseDate) {
-            setError("Please select purchase date.");
+            setError(
+                "Please select purchase date."
+            );
             return;
         }
 
-        if (!Number.isFinite(rawCost) || rawCost <= 0) {
-            setError("Raw cost must be greater than 0.");
+        if (
+            !Number.isFinite(rawCost) ||
+            rawCost <= 0
+        ) {
+            setError(
+                "Raw cost must be greater than 0."
+            );
             return;
         }
 
@@ -313,31 +367,66 @@ const PurchasePage = () => {
             return;
         }
 
-        const purchaseData = {
-            productId,
-            purchaseDate: formData.purchaseDate,
-            productName,
-            rawCost,
-            supplierName,
-            quantity,
-            productImage: formData.productImage || "",
-        };
+        // =================================================
+        // FORMDATA
+        // =================================================
+
+        const data = new FormData();
+
+        data.append("productId", productId);
+        data.append(
+            "purchaseDate",
+            formData.purchaseDate
+        );
+        data.append(
+            "productName",
+            productName
+        );
+        data.append(
+            "rawCost",
+            String(rawCost)
+        );
+        data.append(
+            "supplierName",
+            supplierName
+        );
+        data.append(
+            "quantity",
+            String(quantity)
+        );
+
+        // IMPORTANT:
+        // Route uses upload.single("imageFile")
+        if (formData.imageFile) {
+            data.append(
+                "imageFile",
+                formData.imageFile
+            );
+        }
 
         try {
             setSaving(true);
 
-            // ======================================
+            // =================================================
             // UPDATE
-            // ======================================
+            // =================================================
 
             if (editingId) {
-                const response = await axios.put(
-                    `${API_URL}/${editingId}`,
-                    purchaseData
-                );
+                const response =
+                    await axios.put(
+                        `${API_URL}/${editingId}`,
+                        data,
+                        {
+                            headers: {
+                                "Content-Type":
+                                    "multipart/form-data",
+                            },
+                        }
+                    );
 
                 const updatedPurchase =
-                    response.data.purchase;
+                    response.data?.purchase ||
+                    response.data;
 
                 setPurchases((prev) =>
                     prev.map((item) =>
@@ -348,18 +437,26 @@ const PurchasePage = () => {
                 );
             }
 
-            // ======================================
+            // =================================================
             // CREATE
-            // ======================================
+            // =================================================
 
             else {
-                const response = await axios.post(
-                    API_URL,
-                    purchaseData
-                );
+                const response =
+                    await axios.post(
+                        API_URL,
+                        data,
+                        {
+                            headers: {
+                                "Content-Type":
+                                    "multipart/form-data",
+                            },
+                        }
+                    );
 
                 const newPurchase =
-                    response.data.purchase;
+                    response.data?.purchase ||
+                    response.data;
 
                 setPurchases((prev) => [
                     newPurchase,
@@ -369,20 +466,23 @@ const PurchasePage = () => {
 
             handleCloseModal();
         } catch (error) {
-            console.error("SAVE PURCHASE ERROR:", error);
+            console.error(
+                "SAVE PURCHASE ERROR:",
+                error
+            );
 
             setError(
                 error.response?.data?.message ||
-                "Purchase save nahi ho pa raha."
+                    "Purchase save nahi ho pa raha."
             );
         } finally {
             setSaving(false);
         }
     };
 
-    // ==========================================
+    // =====================================================
     // PDF EXPORT
-    // ==========================================
+    // =====================================================
 
     const handleDownloadPDF = async () => {
         if (!filteredPurchases.length) {
@@ -393,62 +493,146 @@ const PurchasePage = () => {
             return;
         }
 
+        let wrapper = null;
+
         try {
             setError("");
 
-            const reportRows = filteredPurchases
-                .map(
-                    (item, index) => `
-                        <tr>
-                            <td style="padding:8px;border:1px solid #cbd5e1;text-align:center;">
-                                ${index + 1}
-                            </td>
+            const reportRows =
+                filteredPurchases
+                    .map((item, index) => {
+                        const productName =
+                            escapeHtml(
+                                item.productName ||
+                                    "-"
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;">
-                                ${item.productName || "-"}
-                            </td>
+                        const productId =
+                            escapeHtml(
+                                item.productId ||
+                                    "-"
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;">
-                                ${item.productId || "-"}
-                            </td>
+                        const purchaseDate =
+                            escapeHtml(
+                                item.purchaseDate ||
+                                    "-"
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;">
-                                ${item.purchaseDate || "-"}
-                            </td>
+                        const supplierName =
+                            escapeHtml(
+                                item.supplierName ||
+                                    "-"
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;">
-                                ${item.supplierName || "-"}
-                            </td>
+                        const quantity =
+                            Number(
+                                item.quantity || 0
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;text-align:center;">
-                                ${Number(item.quantity || 0)}
-                            </td>
+                        const rawCost =
+                            Number(
+                                item.rawCost || 0
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;text-align:right;">
-                                ₹${Number(
-                                    item.rawCost || 0
-                                ).toLocaleString("en-IN")}
-                            </td>
+                        const totalExpense =
+                            calculateTotalPurchaseCost(
+                                item
+                            );
 
-                            <td style="padding:8px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;">
-                                ₹${calculateTotalPurchaseCost(
-                                    item
-                                ).toLocaleString("en-IN")}
-                            </td>
-                        </tr>
-                    `
-                )
-                .join("");
+                        return `
+                            <tr
+                                style="
+                                    page-break-inside:avoid;
+                                    break-inside:avoid;
+                                "
+                            >
+                                <td style="
+                                    padding:6px 4px;
+                                    border:1px solid #cbd5e1;
+                                    text-align:center;
+                                ">
+                                    ${index + 1}
+                                </td>
+
+                                <td style="
+                                    padding:6px 5px;
+                                    border:1px solid #cbd5e1;
+                                    overflow-wrap:anywhere;
+                                    word-break:break-word;
+                                ">
+                                    ${productName}
+                                </td>
+
+                                <td style="
+                                    padding:6px 5px;
+                                    border:1px solid #cbd5e1;
+                                    font-size:9px;
+                                ">
+                                    ${productId}
+                                </td>
+
+                                <td style="
+                                    padding:6px 5px;
+                                    border:1px solid #cbd5e1;
+                                ">
+                                    ${purchaseDate}
+                                </td>
+
+                                <td style="
+                                    padding:6px 5px;
+                                    border:1px solid #cbd5e1;
+                                    overflow-wrap:anywhere;
+                                ">
+                                    ${supplierName}
+                                </td>
+
+                                <td style="
+                                    padding:6px 4px;
+                                    border:1px solid #cbd5e1;
+                                    text-align:center;
+                                ">
+                                    ${quantity}
+                                </td>
+
+                                <td style="
+                                    padding:6px 4px;
+                                    border:1px solid #cbd5e1;
+                                    text-align:right;
+                                    white-space:nowrap;
+                                ">
+                                    ₹${rawCost.toLocaleString(
+                                        "en-IN"
+                                    )}
+                                </td>
+
+                                <td style="
+                                    padding:6px 4px;
+                                    border:1px solid #cbd5e1;
+                                    text-align:right;
+                                    white-space:nowrap;
+                                    font-weight:700;
+                                ">
+                                    ₹${totalExpense.toLocaleString(
+                                        "en-IN"
+                                    )}
+                                </td>
+                            </tr>
+                        `;
+                    })
+                    .join("");
 
             const reportHTML = `
                 <div
                     style="
-                        width:1100px;
+                        width:1000px;
+                        max-width:1000px;
+                        box-sizing:border-box;
                         background:#ffffff;
                         color:#111827;
                         font-family:Arial,Helvetica,sans-serif;
-                        padding:30px;
-                        box-sizing:border-box;
+                        padding:20px;
+                        margin:0;
                     "
                 >
 
@@ -457,17 +641,17 @@ const PurchasePage = () => {
                             display:flex;
                             justify-content:space-between;
                             border-bottom:2px solid #111827;
-                            padding-bottom:15px;
-                            margin-bottom:20px;
+                            padding-bottom:10px;
+                            margin-bottom:14px;
                         "
                     >
 
                         <div>
+
                             <h1
                                 style="
                                     margin:0;
-                                    font-size:26px;
-                                    font-weight:700;
+                                    font-size:22px;
                                 "
                             >
                                 Vraj Creation
@@ -475,8 +659,8 @@ const PurchasePage = () => {
 
                             <h2
                                 style="
-                                    margin:6px 0 0;
-                                    font-size:20px;
+                                    margin:4px 0 0;
+                                    font-size:16px;
                                     color:#374151;
                                 "
                             >
@@ -485,8 +669,8 @@ const PurchasePage = () => {
 
                             <p
                                 style="
-                                    margin:6px 0 0;
-                                    font-size:12px;
+                                    margin:4px 0 0;
+                                    font-size:9px;
                                     color:#6b7280;
                                 "
                             >
@@ -495,21 +679,26 @@ const PurchasePage = () => {
                                     "en-IN"
                                 )}
                             </p>
+
                         </div>
 
                         <div
                             style="
                                 text-align:right;
-                                font-size:13px;
                             "
                         >
-                            <div style="color:#6b7280;">
+                            <div
+                                style="
+                                    color:#6b7280;
+                                    font-size:9px;
+                                "
+                            >
                                 Total Records
                             </div>
 
                             <strong
                                 style="
-                                    font-size:20px;
+                                    font-size:16px;
                                 "
                             >
                                 ${filteredPurchases.length}
@@ -523,104 +712,64 @@ const PurchasePage = () => {
                             width:100%;
                             border-collapse:collapse;
                             table-layout:fixed;
-                            font-size:11px;
+                            font-size:9px;
+                            line-height:1.3;
                         "
                     >
 
+                        <colgroup>
+                            <col style="width:4%;" />
+                            <col style="width:21%;" />
+                            <col style="width:12%;" />
+                            <col style="width:11%;" />
+                            <col style="width:18%;" />
+                            <col style="width:7%;" />
+                            <col style="width:12%;" />
+                            <col style="width:15%;" />
+                        </colgroup>
+
                         <thead>
+
                             <tr
                                 style="
                                     background:#f1f5f9;
                                 "
                             >
 
-                                <th
-                                    style="
-                                        width:5%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;">
                                     #
                                 </th>
 
-                                <th
-                                    style="
-                                        width:20%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:left;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:left;">
                                     Product
                                 </th>
 
-                                <th
-                                    style="
-                                        width:11%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:left;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:left;">
                                     Product ID
                                 </th>
 
-                                <th
-                                    style="
-                                        width:11%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:left;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:left;">
                                     Date
                                 </th>
 
-                                <th
-                                    style="
-                                        width:18%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:left;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:left;">
                                     Supplier
                                 </th>
 
-                                <th
-                                    style="
-                                        width:8%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;">
                                     Qty
                                 </th>
 
-                                <th
-                                    style="
-                                        width:12%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:right;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:right;">
                                     Raw Cost
                                 </th>
 
-                                <th
-                                    style="
-                                        width:15%;
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:right;
-                                    "
-                                >
+                                <th style="padding:6px;border:1px solid #cbd5e1;text-align:right;">
                                     Total Expense
                                 </th>
 
                             </tr>
+
                         </thead>
 
                         <tbody>
@@ -631,7 +780,7 @@ const PurchasePage = () => {
 
                     <div
                         style="
-                            margin-top:20px;
+                            margin-top:16px;
                             display:flex;
                             justify-content:flex-end;
                         "
@@ -639,90 +788,50 @@ const PurchasePage = () => {
 
                         <table
                             style="
-                                width:320px;
+                                width:300px;
                                 border-collapse:collapse;
-                                font-size:12px;
+                                font-size:10px;
                             "
                         >
 
-                            <tr>
+                            <tbody>
 
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        font-weight:600;
-                                    "
-                                >
-                                    Total Purchase Qty
-                                </td>
+                                <tr>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;">
+                                        Total Purchase Qty
+                                    </td>
 
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:right;
-                                        font-weight:700;
-                                    "
-                                >
-                                    ${totalPurchaseQty.toLocaleString(
-                                        "en-IN"
-                                    )} Units
-                                </td>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;text-align:right;font-weight:700;">
+                                        ${totalPurchaseQty.toLocaleString(
+                                            "en-IN"
+                                        )}
+                                        Units
+                                    </td>
+                                </tr>
 
-                            </tr>
+                                <tr>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;">
+                                        Total Records
+                                    </td>
 
-                            <tr>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;text-align:right;font-weight:700;">
+                                        ${filteredPurchases.length}
+                                    </td>
+                                </tr>
 
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        font-weight:600;
-                                    "
-                                >
-                                    Total Records
-                                </td>
+                                <tr>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;font-weight:700;">
+                                        Total Raw Expense
+                                    </td>
 
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:right;
-                                        font-weight:700;
-                                    "
-                                >
-                                    ${filteredPurchases.length}
-                                </td>
+                                    <td style="padding:6px;border:1px solid #cbd5e1;text-align:right;font-weight:700;">
+                                        ₹${totalRawExpense.toLocaleString(
+                                            "en-IN"
+                                        )}
+                                    </td>
+                                </tr>
 
-                            </tr>
-
-                            <tr>
-
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        font-weight:700;
-                                    "
-                                >
-                                    Total Raw Expense
-                                </td>
-
-                                <td
-                                    style="
-                                        padding:9px;
-                                        border:1px solid #cbd5e1;
-                                        text-align:right;
-                                        font-weight:700;
-                                    "
-                                >
-                                    ₹${totalRawExpense.toLocaleString(
-                                        "en-IN"
-                                    )}
-                                </td>
-
-                            </tr>
+                            </tbody>
 
                         </table>
 
@@ -730,10 +839,10 @@ const PurchasePage = () => {
 
                     <div
                         style="
-                            margin-top:30px;
-                            padding-top:12px;
+                            margin-top:20px;
+                            padding-top:8px;
                             border-top:1px solid #e5e7eb;
-                            font-size:9px;
+                            font-size:8px;
                             color:#9ca3af;
                             text-align:center;
                         "
@@ -744,14 +853,14 @@ const PurchasePage = () => {
                 </div>
             `;
 
-            const wrapper =
+            wrapper =
                 document.createElement("div");
 
             wrapper.style.position = "fixed";
             wrapper.style.left = "-100000px";
             wrapper.style.top = "0";
-            wrapper.style.width = "1100px";
-            wrapper.style.background = "#ffffff";
+            wrapper.style.width = "1000px";
+            wrapper.style.background = "#fff";
             wrapper.innerHTML = reportHTML;
 
             document.body.appendChild(wrapper);
@@ -760,15 +869,16 @@ const PurchasePage = () => {
                 wrapper.firstElementChild;
 
             await new Promise((resolve) =>
-                setTimeout(resolve, 300)
+                setTimeout(resolve, 500)
             );
 
             const options = {
-                margin: 8,
+                margin: [6, 6, 6, 6],
 
-                filename: `Purchase_Report_${new Date()
-                    .toISOString()
-                    .split("T")[0]}.pdf`,
+                filename:
+                    `Purchase_Report_${new Date()
+                        .toISOString()
+                        .split("T")[0]}.pdf`,
 
                 image: {
                     type: "jpeg",
@@ -776,23 +886,26 @@ const PurchasePage = () => {
                 },
 
                 html2canvas: {
-                    scale: 2,
+                    scale: 1.5,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: "#ffffff",
                     logging: false,
                     scrollX: 0,
                     scrollY: 0,
+                    windowWidth: 1000,
                 },
 
                 jsPDF: {
                     unit: "mm",
                     format: "a4",
                     orientation: "landscape",
+                    compress: true,
                 },
 
                 pagebreak: {
                     mode: ["css", "legacy"],
+                    avoid: ["tr"],
                 },
             };
 
@@ -800,32 +913,25 @@ const PurchasePage = () => {
                 .set(options)
                 .from(element)
                 .save();
-
-            wrapper.remove();
         } catch (error) {
             console.error(
                 "PDF EXPORT ERROR:",
                 error
             );
 
-            const oldWrapper =
-                document.querySelector(
-                    "#purchase-pdf-report"
-                );
-
-            if (oldWrapper) {
-                oldWrapper.remove();
-            }
-
             setError(
                 "PDF generate nahi ho pa raha. Please try again."
             );
+        } finally {
+            if (wrapper) {
+                wrapper.remove();
+            }
         }
     };
 
-    // ==========================================
+    // =====================================================
     // LOADING
-    // ==========================================
+    // =====================================================
 
     if (loading) {
         return (
@@ -841,21 +947,18 @@ const PurchasePage = () => {
         );
     }
 
-    // ==========================================
-    // UI
-    // ==========================================
+    // =====================================================
+    // MAIN UI
+    // =====================================================
 
     return (
         <div className="space-y-6">
 
-            {/* =====================================
-                HEADER
-            ====================================== */}
+            {/* HEADER */}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
                 <div>
-
                     <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                         Purchase Orders
                     </h1>
@@ -863,7 +966,6 @@ const PurchasePage = () => {
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         Track raw materials, supplier details and purchase costs
                     </p>
-
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -890,9 +992,7 @@ const PurchasePage = () => {
 
             </div>
 
-            {/* =====================================
-                ERROR
-            ====================================== */}
+            {/* ERROR */}
 
             {error && (
                 <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
@@ -912,9 +1012,7 @@ const PurchasePage = () => {
                 </div>
             )}
 
-            {/* =====================================
-                SEARCH
-            ====================================== */}
+            {/* SEARCH */}
 
             <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
@@ -929,7 +1027,7 @@ const PurchasePage = () => {
                     onChange={(e) =>
                         setSearchTerm(e.target.value)
                     }
-                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                    className="w-full bg-transparent text-sm text-slate-900 caret-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:caret-white"
                 />
 
                 {searchTerm && (
@@ -944,16 +1042,13 @@ const PurchasePage = () => {
 
             </div>
 
-            {/* =====================================
-                TABLE
-            ====================================== */}
+            {/* TABLE */}
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
                 <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
 
                     <div>
-
                         <h2 className="text-xl font-black text-slate-900 dark:text-white">
                             Purchase Statement
                         </h2>
@@ -964,11 +1059,9 @@ const PurchasePage = () => {
                                 "en-IN"
                             )}
                         </p>
-
                     </div>
 
                     <div className="text-left sm:text-right">
-
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                             Total Entries
                         </p>
@@ -976,7 +1069,6 @@ const PurchasePage = () => {
                         <p className="text-lg font-black text-slate-900 dark:text-white">
                             {filteredPurchases.length}
                         </p>
-
                     </div>
 
                 </div>
@@ -1066,8 +1158,6 @@ const PurchasePage = () => {
                                             className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
                                         >
 
-                                            {/* PRODUCT */}
-
                                             <td className="px-4 py-3">
 
                                                 <div className="flex items-center gap-3">
@@ -1078,11 +1168,10 @@ const PurchasePage = () => {
                                                             DEFAULT_IMAGE
                                                         }
                                                         alt={
-                                                            item.productName
+                                                            item.productName ||
+                                                            "Product"
                                                         }
-                                                        onError={(
-                                                            e
-                                                        ) => {
+                                                        onError={(e) => {
                                                             e.currentTarget.src =
                                                                 DEFAULT_IMAGE;
                                                         }}
@@ -1112,25 +1201,17 @@ const PurchasePage = () => {
 
                                             </td>
 
-                                            {/* PRODUCT ID */}
-
                                             <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
                                                 {item.productId}
                                             </td>
-
-                                            {/* DATE */}
 
                                             <td className="px-4 py-3 text-xs font-medium text-slate-600 dark:text-slate-400">
                                                 {item.purchaseDate}
                                             </td>
 
-                                            {/* SUPPLIER */}
-
                                             <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">
                                                 {item.supplierName}
                                             </td>
-
-                                            {/* QTY */}
 
                                             <td className="px-4 py-3 text-center">
 
@@ -1140,15 +1221,11 @@ const PurchasePage = () => {
 
                                             </td>
 
-                                            {/* RAW COST */}
-
                                             <td className="px-4 py-3 font-medium text-slate-600 dark:text-slate-400">
                                                 {formatCurrency(
                                                     item.rawCost
                                                 )}
                                             </td>
-
-                                            {/* TOTAL */}
 
                                             <td className="px-4 py-3 font-black text-blue-600 dark:text-blue-400">
                                                 {formatCurrency(
@@ -1157,8 +1234,6 @@ const PurchasePage = () => {
                                                     )
                                                 )}
                                             </td>
-
-                                            {/* ACTIONS */}
 
                                             <td className="px-4 py-3 text-center">
 
@@ -1207,9 +1282,7 @@ const PurchasePage = () => {
 
                 </div>
 
-                {/* =================================
-                    SUMMARY
-                ================================== */}
+                {/* SUMMARY */}
 
                 <div className="border-t border-slate-200 p-5 dark:border-slate-800">
 
@@ -1267,9 +1340,7 @@ const PurchasePage = () => {
 
             </div>
 
-            {/* =====================================
-                MODAL
-            ====================================== */}
+            {/* MODAL */}
 
             {isModalOpen && (
 
@@ -1287,26 +1358,20 @@ const PurchasePage = () => {
 
                     <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
 
-                        {/* MODAL HEADER */}
-
                         <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
 
                             <div>
 
                                 <h2 className="text-lg font-black text-slate-900 dark:text-white">
-
                                     {editingId
                                         ? "Edit Purchase Entry"
                                         : "Add Purchase Entry"}
-
                                 </h2>
 
                                 <p className="mt-1 text-xs text-slate-400">
-
                                     {editingId
                                         ? "Update purchase information"
                                         : "Add a new raw material purchase"}
-
                                 </p>
 
                             </div>
@@ -1320,8 +1385,6 @@ const PurchasePage = () => {
                             </button>
 
                         </div>
-
-                        {/* FORM */}
 
                         <form
                             onSubmit={handleSubmit}
@@ -1349,7 +1412,9 @@ const PurchasePage = () => {
                                             handleChange
                                         }
                                         required
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                        className={
+                                            INPUT_CLASS
+                                        }
                                     />
 
                                 </div>
@@ -1370,7 +1435,9 @@ const PurchasePage = () => {
                                             handleChange
                                         }
                                         required
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                        className={
+                                            INPUT_CLASS
+                                        }
                                     />
 
                                 </div>
@@ -1396,7 +1463,9 @@ const PurchasePage = () => {
                                         handleChange
                                     }
                                     required
-                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                    className={
+                                        INPUT_CLASS
+                                    }
                                 />
 
                             </div>
@@ -1420,7 +1489,9 @@ const PurchasePage = () => {
                                         handleChange
                                     }
                                     required
-                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                    className={
+                                        INPUT_CLASS
+                                    }
                                 />
 
                             </div>
@@ -1448,7 +1519,9 @@ const PurchasePage = () => {
                                             handleChange
                                         }
                                         required
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                        className={
+                                            INPUT_CLASS
+                                        }
                                     />
 
                                 </div>
@@ -1472,7 +1545,9 @@ const PurchasePage = () => {
                                             handleChange
                                         }
                                         required
-                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-white"
+                                        className={
+                                            INPUT_CLASS
+                                        }
                                     />
 
                                 </div>
@@ -1493,7 +1568,9 @@ const PurchasePage = () => {
                                     onChange={
                                         handleImageFileChange
                                     }
-                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-xs file:font-bold dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:file:bg-slate-700 dark:file:text-white"
+                                    className={
+                                        FILE_INPUT_CLASS
+                                    }
                                 />
 
                                 {formData.productImage && (
@@ -1505,21 +1582,17 @@ const PurchasePage = () => {
                                                 formData.productImage
                                             }
                                             alt="Preview"
+                                            onError={(e) => {
+                                                e.currentTarget.src =
+                                                    DEFAULT_IMAGE;
+                                            }}
                                             className="h-14 w-14 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
                                         />
 
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                setFormData(
-                                                    (
-                                                        prev
-                                                    ) => ({
-                                                        ...prev,
-                                                        productImage:
-                                                            "",
-                                                    })
-                                                )
+                                            onClick={
+                                                handleRemoveImage
                                             }
                                             className="text-xs font-bold text-rose-600 hover:underline"
                                         >
@@ -1532,7 +1605,7 @@ const PurchasePage = () => {
 
                             </div>
 
-                            {/* ERROR */}
+                            {/* MODAL ERROR */}
 
                             {error && (
 
@@ -1562,13 +1635,11 @@ const PurchasePage = () => {
                                     disabled={saving}
                                     className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                                 >
-
                                     {saving
                                         ? "Saving..."
                                         : editingId
-                                            ? "Update Record"
-                                            : "Save Record"}
-
+                                        ? "Update Record"
+                                        : "Save Record"}
                                 </button>
 
                             </div>

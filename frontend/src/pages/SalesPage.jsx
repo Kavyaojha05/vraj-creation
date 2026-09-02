@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-const API_URL = "https://vraj-creation.onrender.com/api/sales";;
-
+const API_URL = "http://localhost:5000/api/sales";
 const SalesPage = () => {
   const [selectedPlatform, setSelectedPlatform] = useState("meesho");
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,46 +13,64 @@ const SalesPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [previewProduct, setPreviewProduct] = useState(null);
 
-  const initialFormState = {
+  // =========================================================
+  // INITIAL FORM
+  // =========================================================
+  const createInitialFormState = () => ({
     productId: "",
     productName: "",
     productImage: "",
+    imageFile: null,
     platform: "meesho",
     date: new Date().toISOString().split("T")[0],
     quantity: 1,
     bankSettlementAmount: "",
     packagingCost: 0,
     colouringCost: 0,
-  };
+  });
 
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState(
+    createInitialFormState()
+  );
 
   // =========================================================
-  // LOAD SALES FROM MONGODB
+  // LOAD SALES
   // =========================================================
   const loadSales = async (showLoader = false) => {
     try {
-      if (showLoader) setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
 
       const response = await fetch(API_URL);
 
+      const result = await response.json().catch(() => null);
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(
+          result?.message ||
+            result?.error ||
+            `HTTP ${response.status}`
+        );
       }
 
-      const data = await response.json();
-
-      const salesData = Array.isArray(data)
-        ? data
-        : Array.isArray(data.sales)
-        ? data.sales
+      const salesData = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.sales)
+        ? result.sales
         : [];
 
       setSales(salesData);
     } catch (error) {
       console.error("LOAD SALES ERROR:", error);
+
+      if (showLoader) {
+        setSales([]);
+      }
     } finally {
-      if (showLoader) setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -71,21 +88,29 @@ const SalesPage = () => {
   }, []);
 
   // =========================================================
-  // FILTER
+  // FILTER SALES
   // =========================================================
   const filteredSales = sales.filter((item) => {
     const platformMatch =
       String(item.platform || "").toLowerCase() ===
       selectedPlatform.toLowerCase();
 
-    const search = searchTerm.toLowerCase().trim();
+    const search = searchTerm
+      .toLowerCase()
+      .trim();
 
-    const productName = String(item.productName || "").toLowerCase();
-    const productId = String(item.productId || "").toLowerCase();
+    const productName = String(
+      item.productName || ""
+    ).toLowerCase();
+
+    const productId = String(
+      item.productId || ""
+    ).toLowerCase();
 
     return (
       platformMatch &&
-      (productName.includes(search) || productId.includes(search))
+      (productName.includes(search) ||
+        productId.includes(search))
     );
   });
 
@@ -100,28 +125,39 @@ const SalesPage = () => {
     );
   };
 
+  // =========================================================
+  // SUMMARY
+  // =========================================================
   const totalSettlement = filteredSales.reduce(
-    (acc, item) => acc + Number(item.bankSettlementAmount || 0),
+    (acc, item) =>
+      acc +
+      Number(item.bankSettlementAmount || 0),
     0
   );
 
   const totalPackaging = filteredSales.reduce(
-    (acc, item) => acc + Number(item.packagingCost || 0),
+    (acc, item) =>
+      acc +
+      Number(item.packagingCost || 0),
     0
   );
 
   const totalColouring = filteredSales.reduce(
-    (acc, item) => acc + Number(item.colouringCost || 0),
+    (acc, item) =>
+      acc +
+      Number(item.colouringCost || 0),
     0
   );
 
   const totalNetMargin = filteredSales.reduce(
-    (acc, item) => acc + calculateMargin(item),
+    (acc, item) =>
+      acc + calculateMargin(item),
     0
   );
 
   const totalQty = filteredSales.reduce(
-    (acc, item) => acc + Number(item.quantity || 0),
+    (acc, item) =>
+      acc + Number(item.quantity || 0),
     0
   );
 
@@ -133,13 +169,13 @@ const SalesPage = () => {
   };
 
   // =========================================================
-  // ADD MODAL
+  // OPEN ADD MODAL
   // =========================================================
   const handleOpenAddModal = () => {
     setEditingId(null);
 
     setFormData({
-      ...initialFormState,
+      ...createInitialFormState(),
       platform: selectedPlatform,
     });
 
@@ -147,7 +183,7 @@ const SalesPage = () => {
   };
 
   // =========================================================
-  // EDIT MODAL
+  // OPEN EDIT MODAL
   // =========================================================
   const handleOpenEditModal = (item) => {
     setEditingId(item._id);
@@ -156,46 +192,83 @@ const SalesPage = () => {
       productId: item.productId || "",
       productName: item.productName || "",
       productImage: item.productImage || "",
+      imageFile: null,
       platform: item.platform || "meesho",
-      date: item.date || new Date().toISOString().split("T")[0],
+      date:
+        item.date ||
+        new Date().toISOString().split("T")[0],
       quantity: item.quantity || 1,
-      bankSettlementAmount: item.bankSettlementAmount || "",
-      packagingCost: item.packagingCost || 0,
-      colouringCost: item.colouringCost || 0,
+      bankSettlementAmount:
+        item.bankSettlementAmount ?? "",
+      packagingCost:
+        item.packagingCost ?? 0,
+      colouringCost:
+        item.colouringCost ?? 0,
     });
 
     setIsModalOpen(true);
   };
 
   // =========================================================
-  // IMAGE
+  // IMAGE CHANGE
   // =========================================================
   const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
-    // Prevent very large images
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image 5MB se chhoti honi chahiye.");
+      alert(
+        "Image 5MB se chhoti honi chahiye."
+      );
+
       e.target.value = "";
       return;
     }
 
-    const reader = new FileReader();
+    if (!file.type.startsWith("image/")) {
+      alert("Sirf image file select karo.");
 
-    reader.onloadend = () => {
-      setFormData((prev) => ({
-        ...prev,
-        productImage: reader.result,
-      }));
-    };
+      e.target.value = "";
+      return;
+    }
 
-    reader.readAsDataURL(file);
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setFormData((prev) => ({
+      ...prev,
+      imageFile: file,
+      productImage: previewUrl,
+    }));
   };
 
   // =========================================================
-  // ADD / UPDATE
+  // REMOVE IMAGE
+  // =========================================================
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({
+      ...prev,
+      imageFile: null,
+      productImage: "",
+    }));
+  };
+
+  // =========================================================
+  // CLOSE MODAL
+  // =========================================================
+  const handleCloseModal = () => {
+    if (saving) return;
+
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(createInitialFormState());
+  };
+
+  // =========================================================
+  // ADD / UPDATE SALE
   // =========================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -205,107 +278,295 @@ const SalesPage = () => {
     try {
       setSaving(true);
 
-      const payload = {
-        productId: String(formData.productId).trim(),
-        productName: String(formData.productName).trim(),
-        productImage: formData.productImage || "",
-        platform: String(formData.platform).toLowerCase(),
-        date: formData.date,
-        quantity: Number(formData.quantity),
-        bankSettlementAmount: Number(formData.bankSettlementAmount),
-        packagingCost: Number(formData.packagingCost || 0),
-        colouringCost: Number(formData.colouringCost || 0),
-      };
+      const productId =
+        String(formData.productId).trim();
 
-      if (!payload.productId || !payload.productName) {
-        alert("Product ID aur Product Name required hai.");
+      const productName =
+        String(formData.productName).trim();
+
+      const platform =
+        String(formData.platform)
+          .trim()
+          .toLowerCase();
+
+      const date = formData.date;
+
+      const quantity =
+        Number(formData.quantity);
+
+      const settlement =
+        Number(
+          formData.bankSettlementAmount
+        );
+
+      const packaging =
+        Number(
+          formData.packagingCost || 0
+        );
+
+      const colouring =
+        Number(
+          formData.colouringCost || 0
+        );
+
+      // =====================================================
+      // VALIDATION
+      // =====================================================
+
+      if (!productId) {
+        alert("Product ID required hai.");
         return;
       }
 
-      if (!payload.date) {
+      if (!productName) {
+        alert("Product Name required hai.");
+        return;
+      }
+
+      if (!platform) {
+        alert("Platform select karo.");
+        return;
+      }
+
+      if (!date) {
         alert("Date select karo.");
         return;
       }
 
-      if (payload.quantity < 1) {
-        alert("Quantity kam se kam 1 honi chahiye.");
+      if (
+        !Number.isFinite(quantity) ||
+        quantity < 1
+      ) {
+        alert(
+          "Quantity kam se kam 1 honi chahiye."
+        );
         return;
       }
 
-      if (payload.bankSettlementAmount < 0) {
-        alert("Settlement amount valid hona chahiye.");
+      if (
+        !Number.isFinite(settlement) ||
+        settlement < 0
+      ) {
+        alert(
+          "Settlement amount valid hona chahiye."
+        );
         return;
       }
+
+      if (
+        !Number.isFinite(packaging) ||
+        packaging < 0
+      ) {
+        alert(
+          "Packaging cost valid hona chahiye."
+        );
+        return;
+      }
+
+      if (
+        !Number.isFinite(colouring) ||
+        colouring < 0
+      ) {
+        alert(
+          "Colouring cost valid hona chahiye."
+        );
+        return;
+      }
+
+      // =====================================================
+      // FORMDATA
+      // =====================================================
+
+      const data = new FormData();
+
+      data.append("productId", productId);
+      data.append("productName", productName);
+      data.append("platform", platform);
+      data.append("date", date);
+      data.append("quantity", String(quantity));
+      data.append(
+        "bankSettlementAmount",
+        String(settlement)
+      );
+      data.append(
+        "packagingCost",
+        String(packaging)
+      );
+      data.append(
+        "colouringCost",
+        String(colouring)
+      );
+
+      // =====================================================
+      // IMAGE
+      // =====================================================
+
+      if (formData.imageFile) {
+        data.append(
+          "productImage",
+          formData.imageFile
+        );
+      }
+
+      // =====================================================
+      // DEBUG
+      // =====================================================
+
+      console.log(
+        "SALE FORM DATA:",
+        {
+          productId,
+          productName,
+          platform,
+          date,
+          quantity,
+          settlement,
+          packaging,
+          colouring,
+          image:
+            formData.imageFile?.name ||
+            "No new image",
+        }
+      );
+
+      // =====================================================
+      // URL + METHOD
+      // =====================================================
 
       const url = editingId
         ? `${API_URL}/${editingId}`
         : API_URL;
 
-      const method = editingId ? "PUT" : "POST";
+      const method = editingId
+        ? "PUT"
+        : "POST";
+
+      console.log(
+        "SALE REQUEST:",
+        method,
+        url
+      );
+
+      // =====================================================
+      // REQUEST
+      // =====================================================
 
       const response = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: data,
       });
 
-      const result = await response.json();
+      // =====================================================
+      // BACKEND RESPONSE
+      // =====================================================
+
+      const result =
+        await response.json().catch(() => null);
+
+      console.log(
+        "SALE API RESPONSE:",
+        result
+      );
 
       if (!response.ok) {
         throw new Error(
-          result?.message || `Request failed: ${response.status}`
+          result?.message ||
+            result?.error ||
+            `Sale request failed with status ${response.status}`
         );
       }
 
-      // Database se latest data
+      // =====================================================
+      // REFRESH
+      // =====================================================
+
       await loadSales(false);
+
+      // =====================================================
+      // RESET
+      // =====================================================
 
       setIsModalOpen(false);
       setEditingId(null);
-      setFormData(initialFormState);
+      setFormData(
+        createInitialFormState()
+      );
+
+      alert(
+        editingId
+          ? "Sale updated successfully."
+          : "Sale added successfully."
+      );
     } catch (error) {
-      console.error("SAVE SALE ERROR:", error);
-      alert(error.message || "Sale save nahi ho saki.");
+      console.error(
+        "SAVE SALE ERROR:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Sale save nahi ho saki."
+      );
     } finally {
       setSaving(false);
     }
   };
 
   // =========================================================
-  // DELETE
+  // DELETE SALE
   // =========================================================
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Kya aap sach me is sale entry ko delete karna chahte hain?"
-    );
+    const confirmDelete =
+      window.confirm(
+        "Kya aap sach me is sale entry ko delete karna chahte hain?"
+      );
 
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API_URL}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      const result = await response.json();
+      const result =
+        await response.json().catch(() => null);
+
+      console.log(
+        "DELETE SALE RESPONSE:",
+        result
+      );
 
       if (!response.ok) {
         throw new Error(
-          result?.message || `Delete failed: ${response.status}`
+          result?.message ||
+            result?.error ||
+            `Delete failed: ${response.status}`
         );
       }
 
       await loadSales(false);
+
+      alert(
+        "Sale deleted successfully."
+      );
     } catch (error) {
-      console.error("DELETE SALE ERROR:", error);
-      alert(error.message || "Sale delete nahi ho saki.");
+      console.error(
+        "DELETE SALE ERROR:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Sale delete nahi ho saki."
+      );
     }
   };
 
   return (
     <div className="space-y-6">
-
       {/* =====================================================
           PRINT CSS
       ===================================================== */}
@@ -361,7 +622,6 @@ const SalesPage = () => {
           HEADER
       ===================================================== */}
       <div className="no-print flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">
             Marketplace Sales
@@ -373,7 +633,6 @@ const SalesPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-
           {/* PLATFORM */}
           <div className="flex rounded-xl bg-slate-200/80 p-1 dark:bg-slate-800">
             {[
@@ -395,7 +654,10 @@ const SalesPage = () => {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setSelectedPlatform(tab.id)}
+                type="button"
+                onClick={() =>
+                  setSelectedPlatform(tab.id)
+                }
                 className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${
                   selectedPlatform === tab.id
                     ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
@@ -410,6 +672,7 @@ const SalesPage = () => {
 
           {/* PRINT */}
           <button
+            type="button"
             onClick={handlePrintPDF}
             className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-red-700"
           >
@@ -419,6 +682,7 @@ const SalesPage = () => {
 
           {/* ADD */}
           <button
+            type="button"
             onClick={handleOpenAddModal}
             className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
@@ -432,7 +696,6 @@ const SalesPage = () => {
           SEARCH
       ===================================================== */}
       <div className="no-print flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
-
         <span className="text-slate-400">
           🔍
         </span>
@@ -441,7 +704,9 @@ const SalesPage = () => {
           type="text"
           placeholder="Search by Product Name or ID..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) =>
+            setSearchTerm(e.target.value)
+          }
           className="w-full bg-transparent text-sm focus:outline-none dark:text-white"
         />
       </div>
@@ -450,10 +715,8 @@ const SalesPage = () => {
           PRINT AREA
       ===================================================== */}
       <div className="print-area space-y-6">
-
         {/* PRINT HEADER */}
         <div className="hidden border-b border-slate-300 pb-2 print:block">
-
           <h2 className="text-lg font-black text-slate-900">
             Sales & Margin Report (
             {selectedPlatform.toUpperCase()}
@@ -462,7 +725,9 @@ const SalesPage = () => {
 
           <p className="text-[10px] text-slate-600">
             Date Generated:{" "}
-            {new Date().toLocaleDateString("en-IN")}
+            {new Date().toLocaleDateString(
+              "en-IN"
+            )}
           </p>
         </div>
 
@@ -470,13 +735,9 @@ const SalesPage = () => {
             TABLE
         ===================================================== */}
         <div className="print-table-wrapper overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 print:border-slate-300">
-
           <div className="overflow-x-auto print:overflow-visible">
-
             <table className="w-full text-left text-xs sm:text-sm">
-
               <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400 print:border-slate-300 print:bg-slate-100 print:text-slate-800">
-
                 <tr>
                   <th className="w-[25%] px-3 py-3 print:w-[22%]">
                     Product
@@ -514,11 +775,9 @@ const SalesPage = () => {
                     Actions
                   </th>
                 </tr>
-
               </thead>
 
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-200">
-
                 {loading ? (
                   <tr>
                     <td
@@ -540,29 +799,33 @@ const SalesPage = () => {
                   </tr>
                 ) : (
                   filteredSales.map((item) => {
-                    const margin = calculateMargin(item);
+                    const margin =
+                      calculateMargin(item);
 
                     return (
                       <tr
                         key={item._id}
                         className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
                       >
-
                         {/* PRODUCT */}
                         <td className="px-3 py-2.5">
-
                           <div
                             onClick={() =>
-                              setPreviewProduct(item)
+                              setPreviewProduct(
+                                item
+                              )
                             }
                             className="group flex cursor-pointer items-center gap-2"
                             title="Click to Preview Product"
                           >
-
                             {item.productImage ? (
                               <img
-                                src={item.productImage}
-                                alt={item.productName}
+                                src={
+                                  item.productImage
+                                }
+                                alt={
+                                  item.productName
+                                }
                                 className="print-img h-8 w-8 shrink-0 rounded-lg border border-slate-200 object-cover transition group-hover:scale-105 dark:border-slate-700"
                               />
                             ) : (
@@ -572,14 +835,14 @@ const SalesPage = () => {
                             )}
 
                             <span className="leading-tight font-bold text-slate-800 underline-offset-2 group-hover:text-blue-600 group-hover:underline dark:text-slate-100 dark:group-hover:text-blue-400 print:text-black">
-                              {item.productName}
+                              {
+                                item.productName
+                              }
                             </span>
-
                           </div>
-
                         </td>
 
-                        {/* ID */}
+                        {/* PRODUCT ID */}
                         <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 print:text-slate-700">
                           {item.productId}
                         </td>
@@ -598,8 +861,11 @@ const SalesPage = () => {
                         <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white print:text-black">
                           ₹
                           {Number(
-                            item.bankSettlementAmount || 0
-                          ).toLocaleString("en-IN")}
+                            item.bankSettlementAmount ||
+                              0
+                          ).toLocaleString(
+                            "en-IN"
+                          )}
                         </td>
 
                         {/* PACKAGING */}
@@ -607,7 +873,9 @@ const SalesPage = () => {
                           ₹
                           {Number(
                             item.packagingCost || 0
-                          ).toLocaleString("en-IN")}
+                          ).toLocaleString(
+                            "en-IN"
+                          )}
                         </td>
 
                         {/* COLOURING */}
@@ -615,23 +883,28 @@ const SalesPage = () => {
                           ₹
                           {Number(
                             item.colouringCost || 0
-                          ).toLocaleString("en-IN")}
+                          ).toLocaleString(
+                            "en-IN"
+                          )}
                         </td>
 
                         {/* MARGIN */}
                         <td className="px-3 py-2.5 font-black text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
                           ₹
-                          {margin.toLocaleString("en-IN")}
+                          {margin.toLocaleString(
+                            "en-IN"
+                          )}
                         </td>
 
                         {/* ACTIONS */}
                         <td className="no-print px-3 py-2.5 text-center">
-
                           <div className="flex items-center justify-center gap-1">
-
                             <button
+                              type="button"
                               onClick={() =>
-                                setPreviewProduct(item)
+                                setPreviewProduct(
+                                  item
+                                )
                               }
                               className="rounded-lg p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                               title="Preview"
@@ -640,8 +913,11 @@ const SalesPage = () => {
                             </button>
 
                             <button
+                              type="button"
                               onClick={() =>
-                                handleOpenEditModal(item)
+                                handleOpenEditModal(
+                                  item
+                                )
                               }
                               className="rounded-lg p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
                               title="Edit"
@@ -650,24 +926,23 @@ const SalesPage = () => {
                             </button>
 
                             <button
+                              type="button"
                               onClick={() =>
-                                handleDelete(item._id)
+                                handleDelete(
+                                  item._id
+                                )
                               }
                               className="rounded-lg p-1 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
                               title="Delete"
                             >
                               🗑️
                             </button>
-
                           </div>
-
                         </td>
-
                       </tr>
                     );
                   })
                 )}
-
               </tbody>
             </table>
           </div>
@@ -677,17 +952,13 @@ const SalesPage = () => {
             SUMMARY
         ===================================================== */}
         <div className="rounded-2xl border border-slate-200 bg-slate-900 p-4 text-white dark:border-slate-800 dark:bg-slate-950 print:border-slate-300 print:bg-slate-100 print:text-black">
-
           <div className="mb-2 border-b border-slate-800 pb-1.5 print:border-slate-300">
-
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 print:text-slate-700">
               {selectedPlatform.toUpperCase()} Total Summary
             </p>
-
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-5 sm:text-left print:grid-cols-5 print:text-left">
-
             <div>
               <p className="text-[10px] text-slate-400 print:text-slate-600">
                 Total Qty
@@ -704,7 +975,10 @@ const SalesPage = () => {
               </p>
 
               <p className="text-sm font-black text-white print:text-black">
-                ₹{totalSettlement.toLocaleString("en-IN")}
+                ₹
+                {totalSettlement.toLocaleString(
+                  "en-IN"
+                )}
               </p>
             </div>
 
@@ -714,7 +988,10 @@ const SalesPage = () => {
               </p>
 
               <p className="text-sm font-bold text-rose-300 print:text-rose-700">
-                − ₹{totalPackaging.toLocaleString("en-IN")}
+                − ₹
+                {totalPackaging.toLocaleString(
+                  "en-IN"
+                )}
               </p>
             </div>
 
@@ -724,36 +1001,36 @@ const SalesPage = () => {
               </p>
 
               <p className="text-sm font-bold text-rose-300 print:text-rose-700">
-                − ₹{totalColouring.toLocaleString("en-IN")}
+                − ₹
+                {totalColouring.toLocaleString(
+                  "en-IN"
+                )}
               </p>
             </div>
 
             <div className="col-span-2 rounded-xl border border-emerald-800/50 bg-emerald-950/60 p-2 sm:col-span-1 print:col-span-1 print:border-emerald-300 print:bg-emerald-50">
-
               <p className="text-[10px] font-bold uppercase text-emerald-400 print:text-emerald-800">
                 Net Profit
               </p>
 
               <p className="text-base font-black text-emerald-300 print:text-emerald-900">
-                ₹{totalNetMargin.toLocaleString("en-IN")}
+                ₹
+                {totalNetMargin.toLocaleString(
+                  "en-IN"
+                )}
               </p>
-
             </div>
-
           </div>
         </div>
       </div>
 
       {/* =====================================================
-          PRODUCT PREVIEW
+          PRODUCT PREVIEW MODAL
       ===================================================== */}
       {previewProduct && (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-
             <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-
               <div>
                 <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   {previewProduct.platform}
@@ -765,22 +1042,26 @@ const SalesPage = () => {
               </div>
 
               <button
-                onClick={() => setPreviewProduct(null)}
+                type="button"
+                onClick={() =>
+                  setPreviewProduct(null)
+                }
                 className="rounded-lg p-1 text-xl font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 ×
               </button>
-
             </div>
 
             <div className="space-y-4">
-
               <div className="flex h-52 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-
                 {previewProduct.productImage ? (
                   <img
-                    src={previewProduct.productImage}
-                    alt={previewProduct.productName}
+                    src={
+                      previewProduct.productImage
+                    }
+                    alt={
+                      previewProduct.productName
+                    }
                     className="h-full w-full object-contain"
                   />
                 ) : (
@@ -788,30 +1069,32 @@ const SalesPage = () => {
                     🖼️
                   </span>
                 )}
-
               </div>
 
               <div>
-
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  {previewProduct.productName}
+                  {
+                    previewProduct.productName
+                  }
                 </h3>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Order Date: {previewProduct.date}
+                  Order Date:{" "}
+                  {previewProduct.date}
                 </p>
-
               </div>
 
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800/50">
-
                 <div>
                   <span className="text-slate-400">
                     Quantity:
                   </span>
 
                   <p className="font-bold text-slate-800 dark:text-white">
-                    {previewProduct.quantity} units
+                    {
+                      previewProduct.quantity
+                    }{" "}
+                    units
                   </p>
                 </div>
 
@@ -823,8 +1106,11 @@ const SalesPage = () => {
                   <p className="font-bold text-slate-800 dark:text-white">
                     ₹
                     {Number(
-                      previewProduct.bankSettlementAmount || 0
-                    ).toLocaleString("en-IN")}
+                      previewProduct.bankSettlementAmount ||
+                        0
+                    ).toLocaleString(
+                      "en-IN"
+                    )}
                   </p>
                 </div>
 
@@ -836,8 +1122,11 @@ const SalesPage = () => {
                   <p className="font-medium text-rose-500">
                     ₹
                     {Number(
-                      previewProduct.packagingCost || 0
-                    ).toLocaleString("en-IN")}
+                      previewProduct.packagingCost ||
+                        0
+                    ).toLocaleString(
+                      "en-IN"
+                    )}
                   </p>
                 </div>
 
@@ -849,15 +1138,16 @@ const SalesPage = () => {
                   <p className="font-medium text-rose-500">
                     ₹
                     {Number(
-                      previewProduct.colouringCost || 0
-                    ).toLocaleString("en-IN")}
+                      previewProduct.colouringCost ||
+                        0
+                    ).toLocaleString(
+                      "en-IN"
+                    )}
                   </p>
                 </div>
-
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800/40 dark:bg-emerald-950/40">
-
                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
                   Net Margin On Sale
                 </span>
@@ -866,11 +1156,11 @@ const SalesPage = () => {
                   ₹
                   {calculateMargin(
                     previewProduct
-                  ).toLocaleString("en-IN")}
+                  ).toLocaleString(
+                    "en-IN"
+                  )}
                 </span>
-
               </div>
-
             </div>
           </div>
         </div>
@@ -881,11 +1171,8 @@ const SalesPage = () => {
       ===================================================== */}
       {isModalOpen && (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-
           <div className="max-h-[95vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-
               <h2 className="text-lg font-black text-slate-900 dark:text-white">
                 {editingId
                   ? "Edit Sale Entry"
@@ -893,35 +1180,38 @@ const SalesPage = () => {
               </h2>
 
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-xl font-bold text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                type="button"
+                onClick={handleCloseModal}
+                disabled={saving}
+                className="text-xl font-bold text-slate-400 hover:text-slate-600 disabled:opacity-50 dark:hover:text-white"
               >
                 ×
               </button>
-
             </div>
 
             <form
               onSubmit={handleSubmit}
               className="space-y-4"
             >
-
               {/* PLATFORM + DATE */}
               <div className="grid grid-cols-2 gap-3">
-
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Platform
                   </label>
 
                   <select
-                    value={formData.platform}
+                    value={
+                      formData.platform
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        platform: e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          platform:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
@@ -937,11 +1227,9 @@ const SalesPage = () => {
                       Flipkart
                     </option>
                   </select>
-
                 </div>
 
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Date
                   </label>
@@ -949,25 +1237,26 @@ const SalesPage = () => {
                   <input
                     type="date"
                     required
-                    value={formData.date}
+                    value={
+                      formData.date
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        date: e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          date:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
-
               </div>
 
-              {/* PRODUCT ID + QTY */}
+              {/* PRODUCT ID + QUANTITY */}
               <div className="grid grid-cols-2 gap-3">
-
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Product ID
                   </label>
@@ -976,20 +1265,23 @@ const SalesPage = () => {
                     type="text"
                     required
                     placeholder="PRD-101"
-                    value={formData.productId}
+                    value={
+                      formData.productId
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        productId: e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          productId:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
 
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Quantity
                   </label>
@@ -998,23 +1290,25 @@ const SalesPage = () => {
                     type="number"
                     min="1"
                     required
-                    value={formData.quantity}
+                    value={
+                      formData.quantity
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        quantity: e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          quantity:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
-
               </div>
 
               {/* PRODUCT NAME */}
               <div>
-
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                   Product Name
                 </label>
@@ -1023,51 +1317,75 @@ const SalesPage = () => {
                   type="text"
                   required
                   placeholder="Ganesha Idol"
-                  value={formData.productName}
+                  value={
+                    formData.productName
+                  }
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      productName: e.target.value,
-                    })
+                    setFormData(
+                      (prev) => ({
+                        ...prev,
+                        productName:
+                          e.target.value,
+                      })
+                    )
                   }
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
-
               </div>
 
               {/* IMAGE */}
               <div>
-
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                   Product Image
                 </label>
 
-                <div className="mt-1 flex items-center gap-3">
-
+                <div className="mt-1 space-y-3">
                   <input
                     type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={
+                      handleImageFileChange
+                    }
                     className="w-full text-xs text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-xs file:font-bold file:text-slate-700 hover:file:bg-slate-300 dark:file:bg-slate-800 dark:file:text-slate-200"
                   />
 
                   {formData.productImage && (
-                    <img
-                      src={formData.productImage}
-                      alt="Preview"
-                      className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
-                    />
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
+                      <img
+                        src={
+                          formData.productImage
+                        }
+                        alt="Product Preview"
+                        className="h-16 w-16 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
+                      />
+
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                          Image Preview
+                        </p>
+
+                        <p className="text-[10px] text-slate-400">
+                          Max size: 5MB
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={
+                          handleRemoveImage
+                        }
+                        className="rounded-lg bg-rose-100 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-400"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   )}
-
                 </div>
-
               </div>
 
               {/* AMOUNTS */}
               <div className="grid grid-cols-3 gap-3">
-
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Bank Settlement (₹)
                   </label>
@@ -1075,23 +1393,26 @@ const SalesPage = () => {
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     required
                     placeholder="1200"
-                    value={formData.bankSettlementAmount}
+                    value={
+                      formData.bankSettlementAmount
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        bankSettlementAmount:
-                          e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          bankSettlementAmount:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
 
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Packaging (₹)
                   </label>
@@ -1099,21 +1420,24 @@ const SalesPage = () => {
                   <input
                     type="number"
                     min="0"
-                    value={formData.packagingCost}
+                    step="0.01"
+                    value={
+                      formData.packagingCost
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        packagingCost:
-                          e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          packagingCost:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
 
                 <div>
-
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Colouring (₹)
                   </label>
@@ -1121,27 +1445,31 @@ const SalesPage = () => {
                   <input
                     type="number"
                     min="0"
-                    value={formData.colouringCost}
+                    step="0.01"
+                    value={
+                      formData.colouringCost
+                    }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        colouringCost:
-                          e.target.value,
-                      })
+                      setFormData(
+                        (prev) => ({
+                          ...prev,
+                          colouringCost:
+                            e.target.value,
+                        })
+                      )
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-
                 </div>
-
               </div>
 
               {/* BUTTONS */}
               <div className="flex justify-end gap-3 pt-4">
-
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={
+                    handleCloseModal
+                  }
                   disabled={saving}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
@@ -1159,9 +1487,7 @@ const SalesPage = () => {
                     ? "Save Changes"
                     : "Save Entry"}
                 </button>
-
               </div>
-
             </form>
           </div>
         </div>

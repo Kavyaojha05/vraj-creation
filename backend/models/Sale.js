@@ -8,27 +8,27 @@ const saleSchema = new mongoose.Schema(
       trim: true,
     },
 
+    saleDate: {
+      type: String,
+      required: true,
+    },
+
     productName: {
       type: String,
       required: true,
       trim: true,
     },
 
-    productImage: {
-      type: String,
-      default: "",
+    sellingPrice: {
+      type: Number,
+      required: true,
+      min: 0,
     },
 
-    platform: {
+    customerName: {
       type: String,
       required: true,
-      enum: ["meesho", "amazon", "flipkart"],
-      lowercase: true,
-    },
-
-    date: {
-      type: String,
-      required: true,
+      trim: true,
     },
 
     quantity: {
@@ -37,22 +37,14 @@ const saleSchema = new mongoose.Schema(
       min: 1,
     },
 
-    bankSettlementAmount: {
-      type: Number,
-      required: true,
-      min: 0,
+    productImage: {
+      type: String,
+      default: "",
     },
 
-    packagingCost: {
+    totalAmount: {
       type: Number,
       default: 0,
-      min: 0,
-    },
-
-    colouringCost: {
-      type: Number,
-      default: 0,
-      min: 0,
     },
   },
   {
@@ -60,6 +52,31 @@ const saleSchema = new mongoose.Schema(
   }
 );
 
-const Sale = mongoose.model("Sale", saleSchema);
+saleSchema.pre("save", function (next) {
+  this.totalAmount =
+    Number(this.sellingPrice || 0) *
+    Number(this.quantity || 0);
 
-module.exports = Sale;
+  next();
+});
+
+saleSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+
+  if (
+    update.sellingPrice !== undefined ||
+    update.quantity !== undefined
+  ) {
+    const sellingPrice =
+      Number(update.sellingPrice || 0);
+
+    const quantity =
+      Number(update.quantity || 0);
+
+    update.totalAmount = sellingPrice * quantity;
+  }
+
+  next();
+});
+
+module.exports = mongoose.model("Sale", saleSchema);

@@ -37,6 +37,7 @@ const purchaseSchema = new mongoose.Schema(
       min: 1,
     },
 
+    // Cloudinary image URL
     productImage: {
       type: String,
       default: "",

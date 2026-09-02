@@ -1,8 +1,81 @@
 const Purchase = require("../models/Purchase");
+const cloudinary = require("../config/cloudinary");
 
-// ==============================
+// =====================================================
+// CLOUDINARY UPLOAD HELPER
+// =====================================================
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "vraj-creation/purchases",
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    stream.end(fileBuffer);
+  });
+};
+
+// =====================================================
+// DELETE CLOUDINARY IMAGE
+// =====================================================
+const deleteFromCloudinary = async (imageUrl) => {
+  try {
+    if (!imageUrl || !imageUrl.includes("cloudinary.com")) {
+      return;
+    }
+
+    const parts = imageUrl.split("/");
+
+    const uploadIndex = parts.findIndex(
+      (part) => part === "upload"
+    );
+
+    if (uploadIndex === -1) return;
+
+    let publicIdParts = parts.slice(uploadIndex + 1);
+
+    // Remove version folder such as v123456
+    if (
+      publicIdParts[0] &&
+      /^v\d+$/.test(publicIdParts[0])
+    ) {
+      publicIdParts.shift();
+    }
+
+    const publicIdWithExtension =
+      publicIdParts.join("/");
+
+    const publicId =
+      publicIdWithExtension.replace(
+        /\.[^/.]+$/,
+        ""
+      );
+
+    if (!publicId) return;
+
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+    });
+  } catch (error) {
+    console.error(
+      "CLOUDINARY DELETE ERROR:",
+      error.message
+    );
+  }
+};
+
+// =====================================================
 // GET ALL PURCHASES
-// ==============================
+// =====================================================
 const getPurchases = async (req, res) => {
   try {
     const purchases = await Purchase.find().sort({
@@ -20,12 +93,14 @@ const getPurchases = async (req, res) => {
   }
 };
 
-// ==============================
+// =====================================================
 // GET SINGLE PURCHASE
-// ==============================
+// =====================================================
 const getPurchaseById = async (req, res) => {
   try {
-    const purchase = await Purchase.findById(req.params.id);
+    const purchase = await Purchase.findById(
+      req.params.id
+    );
 
     if (!purchase) {
       return res.status(404).json({
@@ -44,9 +119,9 @@ const getPurchaseById = async (req, res) => {
   }
 };
 
-// ==============================
+// =====================================================
 // CREATE PURCHASE
-// ==============================
+// =====================================================
 const createPurchase = async (req, res) => {
   try {
     const {
@@ -56,7 +131,6 @@ const createPurchase = async (req, res) => {
       rawCost,
       supplierName,
       quantity,
-      productImage,
     } = req.body;
 
     if (
@@ -82,6 +156,21 @@ const createPurchase = async (req, res) => {
       });
     }
 
+    // =================================================
+    // CLOUDINARY IMAGE UPLOAD
+    // =================================================
+    let productImage = "";
+
+    if (req.file) {
+      const uploadedImage =
+        await uploadToCloudinary(req.file.buffer);
+
+      productImage = uploadedImage.secure_url;
+    }
+
+    // =================================================
+    // CREATE PURCHASE
+    // =================================================
     const purchase = await Purchase.create({
       productId: productId.trim(),
       purchaseDate,
@@ -89,7 +178,10 @@ const createPurchase = async (req, res) => {
       rawCost: Number(rawCost),
       supplierName: supplierName.trim(),
       quantity: Number(quantity),
-      productImage: productImage || "",
+
+      // Cloudinary URL
+      productImage,
+
       totalExpense:
         Number(rawCost) * Number(quantity),
     });
@@ -108,9 +200,9 @@ const createPurchase = async (req, res) => {
   }
 };
 
-// ==============================
+// =====================================================
 // UPDATE PURCHASE
-// ==============================
+// =====================================================
 const updatePurchase = async (req, res) => {
   try {
     const {
@@ -120,7 +212,6 @@ const updatePurchase = async (req, res) => {
       rawCost,
       supplierName,
       quantity,
-      productImage,
     } = req.body;
 
     const purchase = await Purchase.findById(
@@ -133,25 +224,49 @@ const updatePurchase = async (req, res) => {
       });
     }
 
-    purchase.productId = productId;
+    // =================================================
+    // UPDATE BASIC DATA
+    // =================================================
+    purchase.productId = productId?.trim();
     purchase.purchaseDate = purchaseDate;
-    purchase.productName = productName;
+    purchase.productName = productName?.trim();
     purchase.rawCost = Number(rawCost);
-    purchase.supplierName = supplierName;
+    purchase.supplierName = supplierName?.trim();
     purchase.quantity = Number(quantity);
-    purchase.productImage = productImage || "";
 
     purchase.totalExpense =
       Number(rawCost) * Number(quantity);
 
-    const updatedPurchase = await purchase.save();
+    // =================================================
+    // NEW IMAGE UPLOADED
+    // =================================================
+    if (req.file) {
+      const oldImage = purchase.productImage;
+
+      const uploadedImage =
+        await uploadToCloudinary(req.file.buffer);
+
+      purchase.productImage =
+        uploadedImage.secure_url;
+
+      // Delete old Cloudinary image
+      if (oldImage) {
+        await deleteFromCloudinary(oldImage);
+      }
+    }
+
+    const updatedPurchase =
+      await purchase.save();
 
     res.status(200).json({
       message: "Purchase updated successfully",
       purchase: updatedPurchase,
     });
   } catch (error) {
-    console.error("UPDATE PURCHASE ERROR:", error);
+    console.error(
+      "UPDATE PURCHASE ERROR:",
+      error
+    );
 
     res.status(500).json({
       message: "Failed to update purchase",
@@ -160,14 +275,15 @@ const updatePurchase = async (req, res) => {
   }
 };
 
-// ==============================
+// =====================================================
 // DELETE PURCHASE
-// ==============================
+// =====================================================
 const deletePurchase = async (req, res) => {
   try {
-    const purchase = await Purchase.findByIdAndDelete(
-      req.params.id
-    );
+    const purchase =
+      await Purchase.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!purchase) {
       return res.status(404).json({
@@ -175,11 +291,21 @@ const deletePurchase = async (req, res) => {
       });
     }
 
+    // Delete Cloudinary image
+    if (purchase.productImage) {
+      await deleteFromCloudinary(
+        purchase.productImage
+      );
+    }
+
     res.status(200).json({
       message: "Purchase deleted successfully",
     });
   } catch (error) {
-    console.error("DELETE PURCHASE ERROR:", error);
+    console.error(
+      "DELETE PURCHASE ERROR:",
+      error
+    );
 
     res.status(500).json({
       message: "Failed to delete purchase",
