@@ -15,23 +15,79 @@ const ProductView = () => {
   // ==========================================
 
   const getImageUrl = (image) => {
-  if (!image) return "";
+    if (!image) return "";
 
-  // Already full URL
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
-  }
+    if (
+      image.startsWith("http://") ||
+      image.startsWith("https://")
+    ) {
+      return image;
+    }
 
-  // Remove extra spaces
-  const imagePath = image.trim();
+    const imagePath = image.trim();
 
-  // Make sure path starts with /
-  const path = imagePath.startsWith("/")
-    ? imagePath
-    : `/${imagePath}`;
+    const path = imagePath.startsWith("/")
+      ? imagePath
+      : `/${imagePath}`;
 
-  return `https://vraj-creation.onrender.com${path}`;
-};
+    const baseURL =
+      api.defaults.baseURL?.replace(/\/api\/?$/, "") ||
+      "https://vraj-creation.onrender.com";
+
+    return `${baseURL}${path}`;
+  };
+
+  // ==========================================
+  // SIZE FORMAT
+  // ==========================================
+
+  const getProductSize = (product) => {
+    if (!product) return "—";
+
+    // ------------------------------------------
+    // 1. Already saved final size
+    // Example: 10 × 5 × 3 cm
+    // ------------------------------------------
+
+    if (
+      product.size &&
+      String(product.size).trim()
+    ) {
+      return String(product.size).trim();
+    }
+
+    // ------------------------------------------
+    // 2. New dimension fields
+    // ------------------------------------------
+
+    const length =
+      product.length ??
+      product.sizeLength ??
+      "";
+
+    const breadth =
+      product.breadth ??
+      product.sizeBreadth ??
+      "";
+
+    const height =
+      product.height ??
+      product.sizeHeight ??
+      "";
+
+    const sizeUnit =
+      product.sizeUnit || "cm";
+
+    if (
+      length !== "" &&
+      breadth !== "" &&
+      height !== ""
+    ) {
+      return `${length} × ${breadth} × ${height} ${sizeUnit}`;
+    }
+
+    return "—";
+  };
 
   // ==========================================
   // FETCH PRODUCT
@@ -44,9 +100,19 @@ const ProductView = () => {
 
       const response = await api.get(`/products/${id}`);
 
-      setProduct(response.data.product);
+      const productData = response.data?.product;
+
+      if (!productData) {
+        setError("Product not found.");
+        return;
+      }
+
+      setProduct(productData);
     } catch (error) {
-      console.error("PRODUCT DETAILS ERROR:", error);
+      console.error(
+        "PRODUCT DETAILS ERROR:",
+        error
+      );
 
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
@@ -83,7 +149,9 @@ const ProductView = () => {
   const getStockStatus = () => {
     if (!product) return null;
 
-    const stock = Number(product.stock || 0);
+    const stock = Number(
+      product.stock || 0
+    );
 
     const minimum = Number(
       product.minimumStock || 5
@@ -119,13 +187,17 @@ const ProductView = () => {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
+
         <div className="text-center">
+
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
 
           <p className="mt-4 text-sm font-medium text-slate-500">
             Loading product...
           </p>
+
         </div>
+
       </div>
     );
   }
@@ -137,7 +209,9 @@ const ProductView = () => {
   if (error || !product) {
     return (
       <div className="mx-auto max-w-4xl py-10">
+
         <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+
           <div className="text-5xl">
             ❌
           </div>
@@ -159,7 +233,9 @@ const ProductView = () => {
           >
             ← Back to Products
           </button>
+
         </div>
+
       </div>
     );
   }
@@ -168,7 +244,11 @@ const ProductView = () => {
   // CALCULATIONS
   // ==========================================
 
-  const stockStatus = getStockStatus();
+  const stockStatus =
+    getStockStatus();
+
+  const productSize =
+    getProductSize(product);
 
   const purchasePrice = Number(
     product.purchasePrice || 0
@@ -203,6 +283,7 @@ const ProductView = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
+
           <p className="text-sm font-medium text-slate-500">
             Inventory / Product
           </p>
@@ -214,6 +295,7 @@ const ProductView = () => {
           <p className="mt-1 text-sm text-slate-500">
             SKU: {product.sku}
           </p>
+
         </div>
 
         <div className="flex gap-2">
@@ -225,6 +307,15 @@ const ProductView = () => {
             className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             ← Back
+          </button>
+
+          <button
+            onClick={() =>
+              navigate(`/products/edit/${product._id}`)
+            }
+            className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            ✏️ Edit
           </button>
 
         </div>
@@ -254,6 +345,10 @@ const ProductView = () => {
                   )}
                   alt={product.name}
                   className="max-h-[380px] w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display =
+                      "none";
+                  }}
                 />
               ) : (
                 <div className="text-center">
@@ -356,16 +451,11 @@ const ProductView = () => {
                 }
               />
 
-              {/* SIZE - OPTIONAL */}
+              {/* SIZE */}
 
               <Info
-                label="Size"
-                value={
-                  product.size &&
-                  String(product.size).trim()
-                    ? product.size
-                    : "—"
-                }
+                label="Product Size"
+                value={productSize}
               />
 
               <Info
@@ -546,7 +636,7 @@ const ProductView = () => {
           CREATED / UPDATED
       ====================================== */}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 pb-8 sm:grid-cols-2">
 
         {/* CREATED */}
 
@@ -602,7 +692,10 @@ const ProductView = () => {
 // INFO COMPONENT
 // ==========================================
 
-const Info = ({ label, value }) => {
+const Info = ({
+  label,
+  value,
+}) => {
   return (
     <div>
 
@@ -610,7 +703,13 @@ const Info = ({ label, value }) => {
         {label}
       </p>
 
-      <p className="mt-1 text-sm font-bold text-slate-800">
+      <p
+        className={`mt-1 text-sm font-bold ${
+          value === "—"
+            ? "text-slate-400"
+            : "text-slate-800"
+        }`}
+      >
         {value || "—"}
       </p>
 

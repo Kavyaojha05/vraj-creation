@@ -65,21 +65,30 @@ const Products = () => {
   // =====================================================
   // IMAGE URL
   // =====================================================
-const getImageUrl = (image) => {
-  if (!image) return "";
 
-  // Already complete URL
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
-  }
+  const getImageUrl = (image) => {
+    if (!image) return "";
 
-  const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, "");
+    if (
+      image.startsWith("http://") ||
+      image.startsWith("https://")
+    ) {
+      return image;
+    }
 
-  // Ensure / between domain and image path
-  const imagePath = image.startsWith("/") ? image : `/${image}`;
+    const baseURL =
+      api.defaults.baseURL?.replace(
+        /\/api\/?$/,
+        ""
+      ) || "";
 
-  return `${baseURL}${imagePath}`;
-};
+    const imagePath = image.startsWith("/")
+      ? image
+      : `/${image}`;
+
+    return `${baseURL}${imagePath}`;
+  };
+
   // =====================================================
   // DELETE PRODUCT
   // =====================================================
@@ -95,7 +104,9 @@ const getImageUrl = (image) => {
       await api.delete(`/products/${id}`);
 
       setProducts((prev) =>
-        prev.filter((product) => product._id !== id)
+        prev.filter(
+          (product) => product._id !== id
+        )
       );
     } catch (err) {
       console.error("DELETE ERROR:", err);
@@ -135,13 +146,19 @@ const getImageUrl = (image) => {
           .includes(searchText) ||
         product.category
           ?.toLowerCase()
+          .includes(searchText) ||
+        product.size
+          ?.toLowerCase()
           .includes(searchText);
 
       const matchesCategory =
         category === "all" ||
         product.category === category;
 
-      const stock = Number(product.stock || 0);
+      const stock = Number(
+        product.stock || 0
+      );
+
       const minimumStock = Number(
         product.minimumStock || 5
       );
@@ -371,7 +388,7 @@ const getImageUrl = (image) => {
 
             <input
               type="text"
-              placeholder="Search name, SKU..."
+              placeholder="Search name, SKU, size..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
@@ -491,9 +508,10 @@ const getImageUrl = (image) => {
 
           <div className="overflow-x-auto">
 
-            <table className="w-full min-w-[900px]">
+            <table className="w-full min-w-[1100px]">
 
               <thead>
+
                 <tr className="border-b border-slate-100 bg-slate-50 text-left dark:border-slate-800 dark:bg-slate-800/50">
 
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
@@ -506,6 +524,12 @@ const getImageUrl = (image) => {
 
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
                     Category
+                  </th>
+
+                  {/* SIZE */}
+
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
+                    Size
                   </th>
 
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
@@ -525,6 +549,7 @@ const getImageUrl = (image) => {
                   </th>
 
                 </tr>
+
               </thead>
 
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -622,7 +647,9 @@ const ProductTableRow = ({
   const [imageError, setImageError] =
     useState(false);
 
-  const stock = Number(product.stock || 0);
+  const stock = Number(
+    product.stock || 0
+  );
 
   const minimumStock = Number(
     product.minimumStock || 5
@@ -654,6 +681,16 @@ const ProductTableRow = ({
 
   const status = getStockStatus();
 
+  // ===================================================
+  // SIZE
+  // ===================================================
+
+  const productSize =
+    product.size &&
+    String(product.size).trim()
+      ? String(product.size).trim()
+      : "--";
+
   return (
     <tr className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
 
@@ -672,7 +709,10 @@ const ProductTableRow = ({
             {imageUrl && !imageError ? (
               <img
                 src={imageUrl}
-                alt={product.name || "Product"}
+                alt={
+                  product.name ||
+                  "Product"
+                }
                 onError={() =>
                   setImageError(true)
                 }
@@ -717,6 +757,22 @@ const ProductTableRow = ({
 
       <td className="px-5 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
         {product.category || "-"}
+      </td>
+
+      {/* SIZE */}
+
+      <td className="px-5 py-4">
+
+        <span
+          className={
+            productSize === "--"
+              ? "text-sm font-semibold text-slate-400"
+              : "whitespace-nowrap text-sm font-black text-slate-700 dark:text-slate-200"
+          }
+        >
+          {productSize}
+        </span>
+
       </td>
 
       {/* PURCHASE */}

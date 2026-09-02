@@ -26,25 +26,74 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Fast UI render using saved user
+      let parsedUser = null;
+
+      // Restore user immediately from localStorage
       if (savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
-        } catch (e) {
-          console.error("Local storage user parse error", e);
+          parsedUser = JSON.parse(savedUser);
+
+          if (parsedUser) {
+            setUser(parsedUser);
+          }
+        } catch (error) {
+          console.error("Local storage user parse error:", error);
         }
       }
 
-      // Sync with backend profile endpoint
+      // =================================================
+      // SYNC USER WITH BACKEND
+      // =================================================
       try {
         const response = await api.get("/auth/profile");
+
         if (response?.data) {
-          setUser(response.data);
-          localStorage.setItem("user", JSON.stringify(response.data));
+          const profileUser = response.data;
+
+          // IMPORTANT:
+          // Keep saved user information such as name
+          // if backend profile doesn't return it.
+          const updatedUser = {
+            ...(parsedUser || {}),
+            ...(profileUser || {}),
+          };
+
+          // If backend doesn't return name,
+          // keep the name from localStorage.
+          if (
+            !profileUser.name &&
+            parsedUser?.name
+          ) {
+            updatedUser.name = parsedUser.name;
+          }
+
+          // Same for username
+          if (
+            !profileUser.username &&
+            parsedUser?.username
+          ) {
+            updatedUser.username = parsedUser.username;
+          }
+
+          // Same for email
+          if (
+            !profileUser.email &&
+            parsedUser?.email
+          ) {
+            updatedUser.email = parsedUser.email;
+          }
+
+          setUser(updatedUser);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(updatedUser)
+          );
         }
       } catch (error) {
         console.error("Profile sync failed:", error);
-        // Token expired/invalid handling
+
+        // Token expired / invalid
         if (error?.response?.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
@@ -59,11 +108,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // =====================================================
-  // REGISTER METHOD
+  // REGISTER
   // =====================================================
   const register = async (name, email, password) => {
     try {
       setLoading(true);
+
       const response = await api.post("/auth/register", {
         name: name.trim(),
         email: email.trim(),
@@ -71,21 +121,35 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = response?.data || {};
-      const token = data.token || data.accessToken;
-      const loggedInUser = data.user;
+
+      const token =
+        data.token ||
+        data.accessToken ||
+        data.data?.token;
+
+      const loggedInUser =
+        data.user ||
+        data.data?.user;
 
       if (token && loggedInUser) {
         localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(loggedInUser));
+        localStorage.setItem(
+          "user",
+          JSON.stringify(loggedInUser)
+        );
+
         setUser(loggedInUser);
       }
 
       return {
         success: true,
-        message: data.message || "Registration successful.",
+        message:
+          data.message ||
+          "Registration successful.",
       };
     } catch (error) {
       console.error("REGISTER ERROR:", error);
+
       return {
         success: false,
         message:
@@ -99,7 +163,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // =====================================================
-  // LOGIN METHOD
+  // LOGIN
   // =====================================================
   const login = async (email, password) => {
     try {
@@ -131,15 +195,33 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      if (!loggedInUser) {
+        return {
+          success: false,
+          message:
+            "User information missing in backend response.",
+        };
+      }
+
+      // Save token
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(loggedInUser));
+
+      // Save complete user
+      localStorage.setItem(
+        "user",
+        JSON.stringify(loggedInUser)
+      );
+
+      // Update state
       setUser(loggedInUser);
 
       return {
         success: true,
         user: loggedInUser,
         token,
-        message: data.message || "Login successful.",
+        message:
+          data.message ||
+          "Login successful.",
       };
     } catch (error) {
       console.error("LOGIN ERROR:", error);
@@ -157,14 +239,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   // =====================================================
-  // LOGOUT METHOD
+  // LOGOUT
   // =====================================================
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     setUser(null);
   };
 
+  // =====================================================
+  // AUTH CONTEXT VALUE
+  // =====================================================
   const value = {
     user,
     loading,
@@ -180,11 +266,18 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// =====================================================
+// USE AUTH
+// =====================================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
   }
+
   return context;
 };
 

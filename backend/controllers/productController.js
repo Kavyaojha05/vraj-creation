@@ -1,5 +1,52 @@
+const Product = require("../models/Product");
 
-  const Product = require("../models/Product");
+// =====================================================
+// HELPER - CREATE SIZE
+// =====================================================
+
+const createSize = (length, breadth, height, sizeUnit, existingSize = "") => {
+  const parts = [];
+
+  if (
+    length !== undefined &&
+    length !== null &&
+    length !== "" &&
+    !Number.isNaN(Number(length))
+  ) {
+    parts.push(Number(length));
+  }
+
+  if (
+    breadth !== undefined &&
+    breadth !== null &&
+    breadth !== "" &&
+    !Number.isNaN(Number(breadth))
+  ) {
+    parts.push(Number(breadth));
+  }
+
+  if (
+    height !== undefined &&
+    height !== null &&
+    height !== "" &&
+    !Number.isNaN(Number(height))
+  ) {
+    parts.push(Number(height));
+  }
+
+  // If dimensions are available, create final size
+  if (parts.length > 0) {
+    return `${parts.join(" × ")} ${sizeUnit || "cm"}`;
+  }
+
+  // Otherwise use size sent from frontend
+  if (existingSize && String(existingSize).trim()) {
+    return String(existingSize).trim();
+  }
+
+  return "";
+};
+
 // =====================================================
 // GET ALL PRODUCTS
 // =====================================================
@@ -67,6 +114,14 @@ const createProduct = async (req, res) => {
       sku,
       category,
       subcategory,
+
+      // SIZE
+      length,
+      breadth,
+      height,
+      sizeUnit,
+      size,
+
       description,
       purchasePrice,
       sellingPrice,
@@ -76,7 +131,10 @@ const createProduct = async (req, res) => {
       status,
     } = req.body;
 
-    // Required fields
+    // =================================================
+    // REQUIRED FIELDS
+    // =================================================
+
     if (
       !name ||
       !sku ||
@@ -90,13 +148,19 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Convert numbers
+    // =================================================
+    // CONVERT NUMBERS
+    // =================================================
+
     const purchasePriceNumber = Number(purchasePrice);
     const sellingPriceNumber = Number(sellingPrice);
     const stockNumber = Number(stock || 0);
     const minimumStockNumber = Number(minimumStock || 5);
 
-    // Validate numbers
+    // =================================================
+    // VALIDATE NUMBERS
+    // =================================================
+
     if (
       Number.isNaN(purchasePriceNumber) ||
       Number.isNaN(sellingPriceNumber) ||
@@ -109,7 +173,10 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Negative validation
+    // =================================================
+    // NEGATIVE VALIDATION
+    // =================================================
+
     if (
       purchasePriceNumber < 0 ||
       sellingPriceNumber < 0 ||
@@ -122,10 +189,16 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Clean SKU
+    // =================================================
+    // CLEAN SKU
+    // =================================================
+
     const cleanSku = sku.trim().toUpperCase();
 
-    // Check duplicate SKU
+    // =================================================
+    // DUPLICATE SKU
+    // =================================================
+
     const existingProduct = await Product.findOne({
       sku: cleanSku,
     });
@@ -148,7 +221,21 @@ const createProduct = async (req, res) => {
     }
 
     // =================================================
-    // CREATE
+    // SIZE
+    // =================================================
+
+    const finalSize = createSize(
+      length,
+      breadth,
+      height,
+      sizeUnit,
+      size
+    );
+
+    console.log("PRODUCT SIZE:", finalSize);
+
+    // =================================================
+    // CREATE PRODUCT
     // =================================================
 
     const product = await Product.create({
@@ -164,6 +251,9 @@ const createProduct = async (req, res) => {
 
       description: description?.trim() || "",
 
+      // IMPORTANT
+      size: finalSize,
+
       purchasePrice: purchasePriceNumber,
 
       sellingPrice: sellingPriceNumber,
@@ -176,6 +266,10 @@ const createProduct = async (req, res) => {
 
       status: status || "active",
     });
+
+    // =================================================
+    // RESPONSE
+    // =================================================
 
     res.status(201).json({
       success: true,
@@ -221,6 +315,14 @@ const updateProduct = async (req, res) => {
       sku,
       category,
       subcategory,
+
+      // SIZE
+      length,
+      breadth,
+      height,
+      sizeUnit,
+      size,
+
       description,
       purchasePrice,
       sellingPrice,
@@ -257,51 +359,100 @@ const updateProduct = async (req, res) => {
     }
 
     // =================================================
-    // NUMBERS
+    // NUMBER VALIDATION
     // =================================================
 
     if (
       purchasePrice !== undefined &&
-      Number(purchasePrice) < 0
+      (
+        Number.isNaN(Number(purchasePrice)) ||
+        Number(purchasePrice) < 0
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Purchase price cannot be negative",
+        message: "Purchase price must be a valid positive number",
       });
     }
 
     if (
       sellingPrice !== undefined &&
-      Number(sellingPrice) < 0
+      (
+        Number.isNaN(Number(sellingPrice)) ||
+        Number(sellingPrice) < 0
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Selling price cannot be negative",
+        message: "Selling price must be a valid positive number",
       });
     }
 
     if (
       stock !== undefined &&
-      Number(stock) < 0
+      (
+        Number.isNaN(Number(stock)) ||
+        Number(stock) < 0
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Stock cannot be negative",
+        message: "Stock must be a valid positive number",
       });
     }
 
     if (
       minimumStock !== undefined &&
-      Number(minimumStock) < 0
+      (
+        Number.isNaN(Number(minimumStock)) ||
+        Number(minimumStock) < 0
+      )
     ) {
       return res.status(400).json({
         success: false,
-        message: "Minimum stock cannot be negative",
+        message: "Minimum stock must be a valid positive number",
       });
     }
 
     // =================================================
-    // UPDATE FIELDS
+    // SIZE NUMBER VALIDATION
+    // =================================================
+
+    const sizeFields = [
+      {
+        name: "Length",
+        value: length,
+      },
+      {
+        name: "Breadth",
+        value: breadth,
+      },
+      {
+        name: "Height",
+        value: height,
+      },
+    ];
+
+    for (const field of sizeFields) {
+      if (
+        field.value !== undefined &&
+        field.value !== null &&
+        field.value !== ""
+      ) {
+        if (
+          Number.isNaN(Number(field.value)) ||
+          Number(field.value) < 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: `${field.name} must be a valid positive number`,
+          });
+        }
+      }
+    }
+
+    // =================================================
+    // UPDATE BASIC FIELDS
     // =================================================
 
     product.name =
@@ -315,6 +466,10 @@ const updateProduct = async (req, res) => {
 
     product.description =
       description?.trim() ?? product.description;
+
+    // =================================================
+    // UPDATE NUMBERS
+    // =================================================
 
     if (purchasePrice !== undefined) {
       product.purchasePrice = Number(purchasePrice);
@@ -332,11 +487,51 @@ const updateProduct = async (req, res) => {
       product.minimumStock = Number(minimumStock);
     }
 
+    // =================================================
+    // SUPPLIER
+    // =================================================
+
     product.supplier =
       supplier?.trim() ?? product.supplier;
 
+    // =================================================
+    // STATUS
+    // =================================================
+
     product.status =
       status ?? product.status;
+
+    // =================================================
+    // SIZE
+    // =================================================
+
+    const dimensionsWereSent =
+      length !== undefined ||
+      breadth !== undefined ||
+      height !== undefined ||
+      sizeUnit !== undefined;
+
+    if (dimensionsWereSent) {
+      const finalSize = createSize(
+        length,
+        breadth,
+        height,
+        sizeUnit,
+        size
+      );
+
+      product.size = finalSize;
+
+      console.log(
+        "UPDATED PRODUCT SIZE:",
+        finalSize
+      );
+    } else if (
+      size !== undefined
+    ) {
+      product.size =
+        String(size).trim();
+    }
 
     // =================================================
     // NEW IMAGE - CLOUDINARY
@@ -351,6 +546,10 @@ const updateProduct = async (req, res) => {
     // =================================================
 
     await product.save();
+
+    // =================================================
+    // RESPONSE
+    // =================================================
 
     res.json({
       success: true,

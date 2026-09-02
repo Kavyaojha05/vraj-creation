@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
@@ -11,12 +12,14 @@ const EditProduct = () => {
     sku: "",
     category: "",
     subcategory: "",
-    description: "",
 
-    // Optional Size - L × B × H
-    sizeLength: "",
-    sizeBreadth: "",
-    sizeHeight: "",
+    // Product Size
+    length: "",
+    breadth: "",
+    height: "",
+    sizeUnit: "cm",
+
+    description: "",
 
     purchasePrice: "",
     sellingPrice: "",
@@ -53,11 +56,49 @@ const EditProduct = () => {
       api.defaults.baseURL?.replace(/\/api\/?$/, "") ||
       "http://localhost:5000";
 
-    if (imagePath.startsWith("/")) {
-      return `${baseURL}${imagePath}`;
+    const imageUrl = imagePath.startsWith("/")
+      ? imagePath
+      : `/${imagePath}`;
+
+    return `${baseURL}${imageUrl}`;
+  };
+
+  // =====================================================
+  // PARSE OLD SIZE
+  // Example: "10 × 5 × 3 cm"
+  // =====================================================
+
+  const parseSize = (size) => {
+    if (!size || !String(size).trim()) {
+      return {
+        length: "",
+        breadth: "",
+        height: "",
+        sizeUnit: "cm",
+      };
     }
 
-    return `${baseURL}/${imagePath}`;
+    const value = String(size).trim();
+
+    const match = value.match(
+      /^\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*([a-zA-Z]+)?\s*$/
+    );
+
+    if (!match) {
+      return {
+        length: "",
+        breadth: "",
+        height: "",
+        sizeUnit: "cm",
+      };
+    }
+
+    return {
+      length: match[1] || "",
+      breadth: match[2] || "",
+      height: match[3] || "",
+      sizeUnit: match[4] || "cm",
+    };
   };
 
   // =====================================================
@@ -78,17 +119,42 @@ const EditProduct = () => {
         return;
       }
 
+      // ---------------------------------------------------
+      // SIZE
+      // ---------------------------------------------------
+
+      const parsedSize = parseSize(product.size);
+
       setFormData({
         name: product.name || "",
         sku: product.sku || "",
         category: product.category || "",
         subcategory: product.subcategory || "",
-        description: product.description || "",
 
-        // SIZE
-        sizeLength: product.sizeLength ?? "",
-        sizeBreadth: product.sizeBreadth ?? "",
-        sizeHeight: product.sizeHeight ?? "",
+        length:
+          product.length ??
+          product.sizeLength ??
+          parsedSize.length ??
+          "",
+
+        breadth:
+          product.breadth ??
+          product.sizeBreadth ??
+          parsedSize.breadth ??
+          "",
+
+        height:
+          product.height ??
+          product.sizeHeight ??
+          parsedSize.height ??
+          "",
+
+        sizeUnit:
+          product.sizeUnit ||
+          parsedSize.sizeUnit ||
+          "cm",
+
+        description: product.description || "",
 
         purchasePrice: product.purchasePrice ?? "",
         sellingPrice: product.sellingPrice ?? "",
@@ -97,6 +163,10 @@ const EditProduct = () => {
         supplier: product.supplier || "",
         status: product.status || "active",
       });
+
+      // ---------------------------------------------------
+      // IMAGE
+      // ---------------------------------------------------
 
       if (product.image) {
         setPreview(getImageUrl(product.image));
@@ -243,19 +313,21 @@ const EditProduct = () => {
     // ===================================================
 
     const hasLength =
-      formData.sizeLength !== "" &&
-      formData.sizeLength !== null;
+      formData.length !== "" &&
+      formData.length !== null;
 
     const hasBreadth =
-      formData.sizeBreadth !== "" &&
-      formData.sizeBreadth !== null;
+      formData.breadth !== "" &&
+      formData.breadth !== null;
 
     const hasHeight =
-      formData.sizeHeight !== "" &&
-      formData.sizeHeight !== null;
+      formData.height !== "" &&
+      formData.height !== null;
 
     const hasAnySize =
-      hasLength || hasBreadth || hasHeight;
+      hasLength ||
+      hasBreadth ||
+      hasHeight;
 
     if (hasAnySize) {
       if (!hasLength || !hasBreadth || !hasHeight) {
@@ -266,20 +338,20 @@ const EditProduct = () => {
       }
     }
 
-    const sizeLength =
-      hasLength ? Number(formData.sizeLength) : null;
+    const length =
+      hasLength ? Number(formData.length) : null;
 
-    const sizeBreadth =
-      hasBreadth ? Number(formData.sizeBreadth) : null;
+    const breadth =
+      hasBreadth ? Number(formData.breadth) : null;
 
-    const sizeHeight =
-      hasHeight ? Number(formData.sizeHeight) : null;
+    const height =
+      hasHeight ? Number(formData.height) : null;
 
     if (hasAnySize) {
       if (
-        !Number.isFinite(sizeLength) ||
-        !Number.isFinite(sizeBreadth) ||
-        !Number.isFinite(sizeHeight)
+        !Number.isFinite(length) ||
+        !Number.isFinite(breadth) ||
+        !Number.isFinite(height)
       ) {
         setError(
           "Length, Breadth and Height must be valid numbers."
@@ -288,9 +360,9 @@ const EditProduct = () => {
       }
 
       if (
-        sizeLength <= 0 ||
-        sizeBreadth <= 0 ||
-        sizeHeight <= 0
+        length <= 0 ||
+        breadth <= 0 ||
+        height <= 0
       ) {
         setError(
           "Length, Breadth and Height must be greater than 0."
@@ -393,29 +465,47 @@ const EditProduct = () => {
       );
 
       // =================================================
-      // SIZE - OPTIONAL
+      // SIZE
       // =================================================
 
       if (hasAnySize) {
         data.append(
-          "sizeLength",
-          sizeLength
+          "length",
+          String(length)
         );
 
         data.append(
-          "sizeBreadth",
-          sizeBreadth
+          "breadth",
+          String(breadth)
         );
 
         data.append(
-          "sizeHeight",
-          sizeHeight
+          "height",
+          String(height)
         );
+
+        data.append(
+          "sizeUnit",
+          formData.sizeUnit || "cm"
+        );
+
+        // Final size string
+        const size =
+          `${length} × ${breadth} × ${height} ${
+            formData.sizeUnit || "cm"
+          }`;
+
+        data.append("size", size);
       } else {
-        // Empty values so old size can be removed
-        data.append("sizeLength", "");
-        data.append("sizeBreadth", "");
-        data.append("sizeHeight", "");
+        // Clear old size
+        data.append("length", "");
+        data.append("breadth", "");
+        data.append("height", "");
+        data.append(
+          "sizeUnit",
+          formData.sizeUnit || "cm"
+        );
+        data.append("size", "");
       }
 
       // =================================================
@@ -424,22 +514,22 @@ const EditProduct = () => {
 
       data.append(
         "purchasePrice",
-        purchasePrice
+        String(purchasePrice)
       );
 
       data.append(
         "sellingPrice",
-        sellingPrice
+        String(sellingPrice)
       );
 
       data.append(
         "stock",
-        stock
+        String(stock)
       );
 
       data.append(
         "minimumStock",
-        minimumStock
+        String(minimumStock)
       );
 
       // =================================================
@@ -457,7 +547,7 @@ const EditProduct = () => {
       );
 
       // =================================================
-      // NEW IMAGE ONLY
+      // IMAGE
       // =================================================
 
       if (image) {
@@ -529,7 +619,6 @@ const EditProduct = () => {
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-6xl">
-
         <div className="animate-pulse space-y-6">
 
           <div>
@@ -555,13 +644,11 @@ const EditProduct = () => {
               <div className="h-12 rounded-xl bg-slate-200 dark:bg-slate-800" />
 
             </div>
-
           </div>
 
           <div className="h-64 rounded-2xl bg-slate-200 dark:bg-slate-800" />
 
         </div>
-
       </div>
     );
   }
@@ -707,7 +794,7 @@ const EditProduct = () => {
             </div>
 
             {/* ================================================= */}
-            {/* SIZE */}
+            {/* PRODUCT SIZE */}
             {/* ================================================= */}
 
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
@@ -728,55 +815,81 @@ const EditProduct = () => {
 
                 <p className="mt-1 text-xs text-slate-400">
                   Enter dimensions as Length × Breadth × Height.
-                  You can leave all fields blank.
                 </p>
 
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
 
                 <SizeInput
                   label="Length"
-                  name="sizeLength"
-                  value={formData.sizeLength}
+                  name="length"
+                  value={formData.length}
                   onChange={handleChange}
                   placeholder="e.g. 10"
                 />
 
                 <SizeInput
                   label="Breadth"
-                  name="sizeBreadth"
-                  value={formData.sizeBreadth}
+                  name="breadth"
+                  value={formData.breadth}
                   onChange={handleChange}
                   placeholder="e.g. 5"
                 />
 
                 <SizeInput
                   label="Height"
-                  name="sizeHeight"
-                  value={formData.sizeHeight}
+                  name="height"
+                  value={formData.height}
                   onChange={handleChange}
                   placeholder="e.g. 3"
                 />
 
+                <div>
+
+                  <label
+                    htmlFor="sizeUnit"
+                    className="mb-2 block text-sm font-bold text-slate-700 dark:text-slate-300"
+                  >
+                    Unit
+                  </label>
+
+                  <select
+                    id="sizeUnit"
+                    name="sizeUnit"
+                    value={formData.sizeUnit}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-slate-600 dark:focus:ring-slate-800"
+                  >
+                    <option value="mm">mm</option>
+                    <option value="cm">cm</option>
+                    <option value="m">m</option>
+                    <option value="inch">inch</option>
+                    <option value="ft">ft</option>
+                  </select>
+
+                </div>
+
               </div>
 
-              {(formData.sizeLength ||
-                formData.sizeBreadth ||
-                formData.sizeHeight) && (
+              {(formData.length ||
+                formData.breadth ||
+                formData.height) && (
                 <div className="mt-4 rounded-xl bg-white px-4 py-3 dark:bg-slate-900">
 
                   <p className="text-xs font-semibold text-slate-400">
-                    Size
+                    Size Preview
                   </p>
 
                   <p className="mt-1 text-base font-black text-slate-800 dark:text-white">
 
-                    {formData.sizeLength || "—"}
+                    {formData.length || "—"}
                     {" × "}
-                    {formData.sizeBreadth || "—"}
+                    {formData.breadth || "—"}
                     {" × "}
-                    {formData.sizeHeight || "—"}
+                    {formData.height || "—"}
+                    {" "}
+                    {formData.sizeUnit || "cm"}
 
                   </p>
 
@@ -1002,7 +1115,6 @@ const EditProduct = () => {
                   onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-600 dark:focus:ring-slate-800"
                 >
-
                   <option value="active">
                     Active
                   </option>
@@ -1010,7 +1122,6 @@ const EditProduct = () => {
                   <option value="inactive">
                     Inactive
                   </option>
-
                 </select>
 
               </div>

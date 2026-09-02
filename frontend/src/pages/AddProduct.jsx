@@ -244,18 +244,43 @@ const AddProduct = () => {
       // =================================================
 
       if (length !== null) {
-        data.append("length", length);
+        data.append("length", String(length));
       }
 
       if (breadth !== null) {
-        data.append("breadth", breadth);
+        data.append("breadth", String(breadth));
       }
 
       if (height !== null) {
-        data.append("height", height);
+        data.append("height", String(height));
       }
 
       data.append("sizeUnit", formData.sizeUnit);
+
+      // =================================================
+      // FINAL SIZE VALUE
+      // =================================================
+
+      const sizeParts = [];
+
+      if (length !== null) {
+        sizeParts.push(length);
+      }
+
+      if (breadth !== null) {
+        sizeParts.push(breadth);
+      }
+
+      if (height !== null) {
+        sizeParts.push(height);
+      }
+
+      const size =
+        sizeParts.length > 0
+          ? `${sizeParts.join(" × ")} ${formData.sizeUnit}`
+          : "";
+
+      data.append("size", size);
 
       // =================================================
       // OTHER DETAILS
@@ -268,22 +293,22 @@ const AddProduct = () => {
 
       data.append(
         "purchasePrice",
-        purchasePrice
+        String(purchasePrice)
       );
 
       data.append(
         "sellingPrice",
-        sellingPrice
+        String(sellingPrice)
       );
 
       data.append(
         "stock",
-        stock
+        String(stock)
       );
 
       data.append(
         "minimumStock",
-        minimumStock
+        String(minimumStock)
       );
 
       data.append(
@@ -401,6 +426,7 @@ const AddProduct = () => {
 
       setError(
         err.response?.data?.message ||
+          err.response?.data?.error ||
           "Failed to create product. Please try again."
       );
     } finally {
@@ -494,9 +520,7 @@ const AddProduct = () => {
         className="space-y-6"
       >
 
-        {/* ================================================= */}
         {/* BASIC INFORMATION */}
-        {/* ================================================= */}
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
@@ -553,9 +577,7 @@ const AddProduct = () => {
 
             </div>
 
-            {/* ================================================= */}
-            {/* SIZE L × B × H */}
-            {/* ================================================= */}
+            {/* SIZE */}
 
             <div className="mt-5">
 
@@ -602,7 +624,7 @@ const AddProduct = () => {
                   name="sizeUnit"
                   value={formData.sizeUnit}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-600 dark:focus:ring-slate-800"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-600 dark:focus:ring-slate-600 dark:focus:ring-slate-800"
                 >
                   <option value="cm">cm</option>
                   <option value="mm">mm</option>
@@ -641,9 +663,7 @@ const AddProduct = () => {
 
         </section>
 
-        {/* ================================================= */}
         {/* PRODUCT IMAGE */}
-        {/* ================================================= */}
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
@@ -660,8 +680,6 @@ const AddProduct = () => {
           </div>
 
           <div className="flex flex-col gap-6 p-5 sm:flex-row sm:items-center sm:p-6">
-
-            {/* PREVIEW */}
 
             <div className="flex h-44 w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 sm:w-44">
 
@@ -686,8 +704,6 @@ const AddProduct = () => {
               )}
 
             </div>
-
-            {/* UPLOAD AREA */}
 
             <div className="flex-1">
 
@@ -734,9 +750,7 @@ const AddProduct = () => {
 
         </section>
 
-        {/* ================================================= */}
         {/* PRICING & STOCK */}
-        {/* ================================================= */}
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
@@ -806,9 +820,7 @@ const AddProduct = () => {
 
         </section>
 
-        {/* ================================================= */}
         {/* ADDITIONAL INFORMATION */}
-        {/* ================================================= */}
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
@@ -865,9 +877,7 @@ const AddProduct = () => {
 
         </section>
 
-        {/* ================================================= */}
         {/* ACTION BUTTONS */}
-        {/* ================================================= */}
 
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 pb-8 dark:border-slate-800 sm:flex-row sm:justify-end">
 
