@@ -1,6 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+<<<<<<< HEAD
 import logoImg from "../assets/logo2.jpeg";
+=======
+import logoImg from "../assets/logo2.jpeg"; 
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -32,11 +36,14 @@ const Sidebar = () => {
       path: "/invoices",
       icon: "🧾",
     },
+<<<<<<< HEAD
     {
       name: "User Approvals",
       path: "/admin/approvals",
       icon: "🛡️",
     },
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   ];
 
   const handleLogout = () => {
@@ -106,7 +113,10 @@ const Sidebar = () => {
 
         {/* Logout Button */}
         <button
+<<<<<<< HEAD
           type="button"
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white font-medium text-sm transition-all duration-200"
         >

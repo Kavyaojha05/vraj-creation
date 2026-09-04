@@ -37,6 +37,10 @@ const purchaseSchema = new mongoose.Schema(
       min: 1,
     },
 
+<<<<<<< HEAD
+=======
+    // Cloudinary image URL
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     productImage: {
       type: String,
       default: "",

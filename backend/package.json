@@ -10,19 +10,29 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
+<<<<<<< HEAD
     "compression": "^1.8.1",
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     "cors": "^2.8.6",
     "crypto": "^1.0.1",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
+<<<<<<< HEAD
     "express-rate-limit": "^8.7.0",
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.6.0",
     "mongoose": "^8.18.0",
     "multer": "^2.3.0",
     "multer-storage-cloudinary": "^4.0.0",
+<<<<<<< HEAD
     "razorpay": "^2.9.8",
     "streamifier": "^0.1.1"
+=======
+    "razorpay": "^2.9.8"
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

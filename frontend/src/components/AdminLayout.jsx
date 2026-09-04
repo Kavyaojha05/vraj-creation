@@ -23,7 +23,10 @@ const AdminLayout = ({ children }) => {
     { name: "Add Product", path: "/products/add", icon: "➕" },
     { name: "Sales", path: "/sales", icon: "💰" },
     { name: "Purchase", path: "/purchases", icon: "🛒" },
+<<<<<<< HEAD
     { name: "User Approvals", path: "/admin/approvals", icon: "🛡️" }, // <-- Yahan add kar diya gaya hai
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   ];
 
   const handleLogout = () => {
@@ -68,7 +71,11 @@ const AdminLayout = ({ children }) => {
         </div>
 
         {/* MENU */}
+<<<<<<< HEAD
         <nav className="flex-1 px-3 py-5 overflow-y-auto">
+=======
+        <nav className="flex-1 px-3 py-5">
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
           <p className="mb-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
             Main Menu
           </p>
@@ -140,6 +147,7 @@ const AdminLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3">
+<<<<<<< HEAD
             {/* Quick Approvals Button near Theme Toggle */}
             <NavLink
               to="/admin/approvals"
@@ -149,6 +157,8 @@ const AdminLayout = ({ children }) => {
               🛡️
             </NavLink>
 
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
             <button
               type="button"
               onClick={() => setDarkMode((prev) => !prev)}

@@ -2,6 +2,7 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+<<<<<<< HEAD
 const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,6 +14,18 @@ const generateToken = (userId, userRole = "user") => {
       role: userRole,
     },
     secret,
+=======
+// =========================
+// Generate JWT Token
+// =========================
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     {
       expiresIn: "7d",
     }
@@ -20,12 +33,20 @@ const generateToken = (userId, userRole = "user") => {
 };
 
 // =========================
+<<<<<<< HEAD
 // Register (Pending Approval)
+=======
+// Register Admin
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 // =========================
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+<<<<<<< HEAD
+=======
+    // Validation
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     if (!name?.trim() || !email?.trim() || !password) {
       return res.status(400).json({
         success: false,
@@ -33,6 +54,7 @@ const register = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
 
@@ -65,10 +87,50 @@ const register = async (req, res) => {
     const initialStatus = userCount === 0 ? "active" : "pending";
     const initialRole = userCount === 0 ? "admin" : "user";
 
+=======
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check existing user
+    const existingUser = await User.findOne({
+      email: cleanEmail,
+    });
+    console.log("REGISTER EMAIL:", cleanEmail);
+console.log("MONGO DATABASE:", User.db.name);
+console.log(
+  "EXISTING USER:",
+  existingUser
+    ? {
+        id: existingUser._id,
+        email: existingUser.email,
+      }
+    : null
+);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+    
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create admin
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     const user = await User.create({
       name: cleanName,
       email: cleanEmail,
       password: hashedPassword,
+<<<<<<< HEAD
       role: initialRole,
       status: initialStatus,
     });
@@ -88,6 +150,28 @@ const register = async (req, res) => {
         message: "Email already registered in system",
       });
     }
+=======
+      role: "admin",
+    });
+
+    // Generate token
+    const token = generateToken(user);
+
+    return res.status(201).json({
+      success: true,
+      message: "Admin registered successfully",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     return res.status(500).json({
       success: false,
       message: "Registration failed",
@@ -97,12 +181,20 @@ const register = async (req, res) => {
 };
 
 // =========================
+<<<<<<< HEAD
 // Login (Status Check Added)
+=======
+// Login
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 // =========================
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+<<<<<<< HEAD
+=======
+    // Validation
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     if (!email?.trim() || !password) {
       return res.status(400).json({
         success: false,
@@ -112,6 +204,7 @@ const login = async (req, res) => {
 
     const cleanEmail = email.trim().toLowerCase();
 
+<<<<<<< HEAD
     const user = await User.findOne({ email: cleanEmail })
       .select("+password name email role status")
       .lean();
@@ -120,12 +213,21 @@ const login = async (req, res) => {
     const isPasswordCorrect = await bcrypt.compare(String(password), passwordToCompare);
 
     if (!user || !isPasswordCorrect) {
+=======
+    // Find user
+    const user = await User.findOne({
+      email: cleanEmail,
+    });
+
+    if (!user) {
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
       });
     }
 
+<<<<<<< HEAD
     // CHECK: Kya account Admin dwara active kiya gaya hai?
     if (user.status !== "active") {
       return res.status(403).json({
@@ -135,6 +237,23 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user._id, user.role);
+=======
+    // Check password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Generate token
+    const token = generateToken(user);
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
     return res.status(200).json({
       success: true,
@@ -149,9 +268,16 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
+<<<<<<< HEAD
     return res.status(500).json({
       success: false,
       message: "Login service temporarily unavailable",
+=======
+
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       error: error.message,
     });
   }
@@ -162,6 +288,7 @@ const login = async (req, res) => {
 // =========================
 const getProfile = async (req, res) => {
   try {
+<<<<<<< HEAD
     const userId = req.user?.id || req.user?._id;
     const user = await User.findById(userId).select("-password -__v").lean();
 
@@ -219,6 +346,9 @@ const approveUser = async (req, res) => {
       { status: "active" },
       { new: true }
     ).select("name email status role");
+=======
+    const user = await User.findById(req.user.id).select("-password");
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
     if (!user) {
       return res.status(404).json({
@@ -229,6 +359,7 @@ const approveUser = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+<<<<<<< HEAD
       message: `User ${user.name} approved successfully!`,
       user,
     });
@@ -237,6 +368,16 @@ const approveUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to approve user",
+=======
+      user,
+    });
+  } catch (error) {
+    console.error("PROFILE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get profile",
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     });
   }
 };
@@ -245,6 +386,10 @@ module.exports = {
   register,
   login,
   getProfile,
+<<<<<<< HEAD
   getPendingUsers,
   approveUser,
 };
+=======
+};
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7

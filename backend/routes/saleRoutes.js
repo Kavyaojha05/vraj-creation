@@ -1,4 +1,5 @@
 const express = require("express");
+<<<<<<< HEAD
 const Sale = require("../models/Sale");
 
 const router = express.Router();
@@ -166,5 +167,55 @@ router.delete("/:id", async (req, res) => {
     });
   }
 });
+=======
+
+const {
+  getSales,
+  getSaleById,
+  createSale,
+  updateSale,
+  deleteSale,
+} = require("../controllers/saleController");
+
+const upload = require("../middleware/upload");
+
+const router = express.Router();
+
+// ===============================
+// GET ALL SALES
+// ===============================
+router.get("/", getSales);
+
+// ===============================
+// GET SALE BY ID
+// ===============================
+router.get("/:id", getSaleById);
+
+// ===============================
+// CREATE SALE
+// ===============================
+router.post(
+  "/",
+  upload.single("productImage"),
+  createSale
+);
+
+// ===============================
+// UPDATE SALE
+// ===============================
+router.put(
+  "/:id",
+  upload.single("productImage"),
+  updateSale
+);
+
+// ===============================
+// DELETE SALE
+// ===============================
+router.delete(
+  "/:id",
+  deleteSale
+);
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
 module.exports = router;

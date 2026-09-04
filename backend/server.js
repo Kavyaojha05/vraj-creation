@@ -2,15 +2,21 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+<<<<<<< HEAD
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
 dotenv.config();
 
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
+<<<<<<< HEAD
 const userRoutes = require("./routes/userRoutes");
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 const productRoutes = require("./routes/productRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const saleRoutes = require("./routes/saleRoutes");
@@ -23,15 +29,19 @@ const app = express();
 connectDB();
 
 // ==============================
+<<<<<<< HEAD
 // Performance Optimization (Speed Boost)
 // ==============================
 app.use(compression());
 
 // ==============================
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 // Middleware
 // ==============================
 app.use(cors());
 
+<<<<<<< HEAD
 // Purchase/Product image Base64 ke liye JSON limit
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
@@ -51,22 +61,35 @@ const loginLimiter = rateLimit({
 });
 
 app.use("/api/auth/login", loginLimiter);
+=======
+// IMPORTANT:
+// Purchase image Base64 ke liye JSON limit badhai gayi hai
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
 // ==============================
 // Uploads
 // ==============================
 app.use(
   "/uploads",
+<<<<<<< HEAD
   express.static(path.join(__dirname, "uploads"), {
     maxAge: "1d",
   })
+=======
+  express.static(path.join(__dirname, "uploads"))
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 );
 
 // ==============================
 // Routes
 // ==============================
 app.use("/api/auth", authRoutes);
+<<<<<<< HEAD
 app.use("/api/users", userRoutes);
+=======
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 app.use("/api/products", productRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/sales", saleRoutes);
@@ -99,7 +122,11 @@ app.use((err, req, res, next) => {
 
   if (err.type === "entity.too.large") {
     return res.status(413).json({
+<<<<<<< HEAD
       message: "Image/file is too large. Maximum allowed size is 15MB.",
+=======
+      message: "Image/file is too large. Maximum allowed size is 10MB.",
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     });
   }
 

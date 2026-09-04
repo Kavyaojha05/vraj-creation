@@ -8,6 +8,7 @@ const connectDB = async () => {
       throw new Error("MONGO_URL is missing in .env file");
     }
 
+<<<<<<< HEAD
     // High performance connection options
     const conn = await mongoose.connect(mongoURL, {
       maxPoolSize: 25,              // Concurrency badhata hai taaki multiple requests queue me na phasein
@@ -16,6 +17,9 @@ const connectDB = async () => {
       socketTimeoutMS: 45000,       // Heavy queries par premature drop rokne ke liye
       family: 4,                    // IPv4 force karega, jo DNS lookup latency ko reduce karta hai
     });
+=======
+    const conn = await mongoose.connect(mongoURL);
+>>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
