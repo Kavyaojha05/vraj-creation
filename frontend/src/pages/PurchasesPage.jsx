@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import html2pdf from "html2pdf.js";
-<<<<<<< HEAD
-const API_BASE_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:5000/api" 
-  : "https://vraj-creation.onrender.com/api";
+
+const API_BASE_URL = "https://vraj-creation.onrender.com/api";
 
 const API_URL = `${API_BASE_URL}/purchases`;
 const DEFAULT_IMAGE = "https://via.placeholder.com/80";

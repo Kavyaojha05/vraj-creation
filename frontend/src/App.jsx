@@ -11,19 +11,11 @@ import Products from "./pages/Products";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import ProductView from "./pages/ProductView";
-<<<<<<< HEAD
 import SalesPage from "./pages/SalesPage";
 import PurchasesPage from "./pages/PurchasesPage";
 import AdminApprovals from "./pages/AdminApprovals";
 
 import AdminLayout from "./components/AdminLayout";
-=======
-import SalesPage from "./pages/SalesPage"; // Sales Page Import
-import PurchasesPage from "./pages/PurchasesPage"; // Purchases Page Import
-
-import AdminLayout from "./components/AdminLayout";
-
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 import {
   AuthProvider,
   useAuth,
@@ -40,20 +32,10 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="text-center">
-<<<<<<< HEAD
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950 dark:border-slate-700 dark:border-t-white" />
           <p className="mt-4 text-sm font-bold text-slate-500 dark:text-slate-400">
             Loading...
           </p>
-=======
-
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950 dark:border-slate-700 dark:border-t-white" />
-
-          <p className="mt-4 text-sm font-bold text-slate-500 dark:text-slate-400">
-            Loading...
-          </p>
-
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
         </div>
       </div>
     );
@@ -97,46 +79,31 @@ const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* ================================================= */}
       {/* LOGIN */}
-      {/* ================================================= */}
-
       <Route
         path="/login"
         element={
           user ? (
-            <Navigate
-              to="/dashboard"
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           ) : (
             <Login />
           )
         }
       />
 
-      {/* ================================================= */}
       {/* REGISTER */}
-      {/* ================================================= */}
-
       <Route
         path="/register"
         element={
           user ? (
-            <Navigate
-              to="/dashboard"
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           ) : (
             <Register />
           )
         }
       />
 
-      {/* ================================================= */}
       {/* DASHBOARD */}
-      {/* ================================================= */}
-
       <Route
         path="/dashboard"
         element={
@@ -146,10 +113,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* PRODUCTS */}
-      {/* ================================================= */}
-
       <Route
         path="/products"
         element={
@@ -159,10 +123,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* ADD PRODUCT */}
-      {/* ================================================= */}
-
       <Route
         path="/products/add"
         element={
@@ -172,10 +133,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* PRODUCT VIEW */}
-      {/* ================================================= */}
-
       <Route
         path="/products/:id"
         element={
@@ -185,10 +143,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* EDIT PRODUCT */}
-      {/* ================================================= */}
-
       <Route
         path="/products/edit/:id"
         element={
@@ -198,14 +153,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
-<<<<<<< HEAD
       {/* SALES */}
-=======
-      {/* SALES (MEESHO, AMAZON, FLIPKART) */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-      {/* ================================================= */}
-
       <Route
         path="/sales"
         element={
@@ -215,10 +163,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* PURCHASES */}
-      {/* ================================================= */}
-
       <Route
         path="/purchases"
         element={
@@ -228,11 +173,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
-<<<<<<< HEAD
-      {/* ADMIN APPROVALS (NEWLY ADDED ROUTE) */}
-      {/* ================================================= */}
-
+      {/* ADMIN APPROVALS */}
       <Route
         path="/admin/approvals"
         element={
@@ -242,12 +183,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
-=======
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       {/* HOME */}
-      {/* ================================================= */}
-
       <Route
         path="/"
         element={
@@ -258,10 +194,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ================================================= */}
       {/* 404 */}
-      {/* ================================================= */}
-
       <Route
         path="*"
         element={

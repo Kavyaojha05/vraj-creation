@@ -28,7 +28,8 @@ export const AuthProvider = ({ children }) => {
 
       let parsedUser = null;
 
-<<<<<<< HEAD
+      if (savedUser) {
+       <<<<<<< HEAD
       if (savedUser) {
         try {
           parsedUser = JSON.parse(savedUser);
@@ -299,14 +300,7 @@ export const AuthProvider = ({ children }) => {
 =======
 
 >>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-    setUser(null);
-  };
-
-  // =====================================================
-  // AUTH CONTEXT VALUE
-  // =====================================================
-  const value = {
-    user,
+er,
     loading,
     login,
     register,
