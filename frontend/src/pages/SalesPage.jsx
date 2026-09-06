@@ -1,73 +1,99 @@
-<<<<<<< HEAD
-import { useEffect, useState, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 
-// Puraana live URL hata kar ye daalein:
-const API_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:5000/api" 
-  : "https://vraj-creation.onrender.com/api";
+const API_BASE_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:5000/api"
+    : "https://vraj-creation.onrender.com/api";
 
-=======
-import { useEffect, useState } from "react";
+const API_URL = `${API_BASE_URL}/sales`;
 
-const API_URL = "http://localhost:5000/api/sales";
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+// =========================================================
+// FAST API TIMEOUT
+// =========================================================
+
+const API_TIMEOUT = 10000;
+
+// =========================================================
+// FETCH WITH TIMEOUT
+// =========================================================
+
+const fetchWithTimeout = async (url, options = {}) => {
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, API_TIMEOUT);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "Server response mein zyada time lag raha hai. Please try again."
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+// =========================================================
+// INITIAL FORM
+// =========================================================
+
+const createInitialFormState = () => ({
+  productId: "",
+  productName: "",
+  productImage: "",
+  imageFile: null,
+  platform: "meesho",
+  date: new Date().toISOString().split("T")[0],
+  quantity: 1,
+  bankSettlementAmount: "",
+  packagingCost: 0,
+  colouringCost: 0,
+});
+
+// =========================================================
+// SALES PAGE
+// =========================================================
+
 const SalesPage = () => {
-  const [selectedPlatform, setSelectedPlatform] = useState("meesho");
+  const [selectedPlatform, setSelectedPlatform] =
+    useState("meesho");
+
   const [searchTerm, setSearchTerm] = useState("");
+
   const [sales, setSales] = useState([]);
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [previewProduct, setPreviewProduct] = useState(null);
 
-<<<<<<< HEAD
-  const initialFormState = {
-    productId: "",
-    productName: "",
-    productImage: "",
-=======
-  // =========================================================
-  // INITIAL FORM
-  // =========================================================
-  const createInitialFormState = () => ({
-    productId: "",
-    productName: "",
-    productImage: "",
-    imageFile: null,
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-    platform: "meesho",
-    date: new Date().toISOString().split("T")[0],
-    quantity: 1,
-    bankSettlementAmount: "",
-    packagingCost: 0,
-    colouringCost: 0,
-<<<<<<< HEAD
-  };
+  const [previewProduct, setPreviewProduct] =
+    useState(null);
 
-  const [formData, setFormData] = useState(initialFormState);
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  // =========================================================
-  // LOAD SALES FROM BACKEND
-  // =========================================================
-  const loadSales = useCallback(async (showLoader = false) => {
-    try {
-      if (showLoader) setLoading(true);
+  // Prevent duplicate GET requests
+  const requestInProgressRef = useRef(false);
 
-      const response = await fetch(API_URL);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      const salesData = Array.isArray(data)
-        ? data
-        : Array.isArray(data.sales)
-        ? data.sales
-=======
-  });
+  // Image preview URL
+  const previewUrlRef = useRef(null);
 
   const [formData, setFormData] = useState(
     createInitialFormState()
@@ -76,207 +102,196 @@ const SalesPage = () => {
   // =========================================================
   // LOAD SALES
   // =========================================================
-  const loadSales = async (showLoader = false) => {
-    try {
-      if (showLoader) {
-        setLoading(true);
+
+  const loadSales = useCallback(
+    async (showLoader = false) => {
+      if (requestInProgressRef.current) {
+        return;
       }
 
-      const response = await fetch(API_URL);
+      requestInProgressRef.current = true;
 
-      const result = await response.json().catch(() => null);
+      try {
+        if (showLoader) {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
 
-      if (!response.ok) {
-        throw new Error(
-          result?.message ||
-            result?.error ||
-            `HTTP ${response.status}`
+        setErrorMessage("");
+
+        const response =
+          await fetchWithTimeout(API_URL);
+
+        const result =
+          await response
+            .json()
+            .catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            result?.message ||
+              result?.error ||
+              `HTTP ${response.status}`
+          );
+        }
+
+        const salesData = Array.isArray(result)
+          ? result
+          : Array.isArray(result?.sales)
+          ? result.sales
+          : [];
+
+        setSales(salesData);
+      } catch (error) {
+        console.error(
+          "LOAD SALES ERROR:",
+          error
         );
+
+        if (showLoader) {
+          setSales([]);
+          setErrorMessage(
+            error.message ||
+              "Sales load nahi ho saki."
+          );
+        }
+      } finally {
+        requestInProgressRef.current = false;
+
+        setLoading(false);
+        setRefreshing(false);
       }
+    },
+    []
+  );
 
-      const salesData = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.sales)
-        ? result.sales
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-        : [];
-
-      setSales(salesData);
-    } catch (error) {
-      console.error("LOAD SALES ERROR:", error);
-<<<<<<< HEAD
-    } finally {
-      if (showLoader) setLoading(false);
-    }
-  }, []);
+  // =========================================================
+  // INITIAL LOAD ONLY
+  // =========================================================
 
   useEffect(() => {
     loadSales(true);
   }, [loadSales]);
 
   // =========================================================
-  // FILTER
-=======
-
-      if (showLoader) {
-        setSales([]);
-      }
-    } finally {
-      if (showLoader) {
-        setLoading(false);
-      }
-    }
-  };
-
+  // CLEAN IMAGE URL
   // =========================================================
-  // INITIAL LOAD + AUTO REFRESH
-  // =========================================================
+
   useEffect(() => {
-    loadSales(true);
-
-    const interval = setInterval(() => {
-      loadSales(false);
-    }, 5000);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(
+          previewUrlRef.current
+        );
+      }
+    };
   }, []);
 
   // =========================================================
-  // FILTER SALES
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+  // FILTER
   // =========================================================
+
   const filteredSales = sales.filter((item) => {
     const platformMatch =
       String(item.platform || "").toLowerCase() ===
       selectedPlatform.toLowerCase();
 
-<<<<<<< HEAD
-    const search = searchTerm.toLowerCase().trim();
-    const productName = String(item.productName || "").toLowerCase();
-    const productId = String(item.productId || "").toLowerCase();
+    const search =
+      searchTerm.toLowerCase().trim();
 
-    return (
-      platformMatch &&
-      (productName.includes(search) || productId.includes(search))
-=======
-    const search = searchTerm
-      .toLowerCase()
-      .trim();
+    const productName =
+      String(
+        item.productName || ""
+      ).toLowerCase();
 
-    const productName = String(
-      item.productName || ""
-    ).toLowerCase();
-
-    const productId = String(
-      item.productId || ""
-    ).toLowerCase();
+    const productId =
+      String(
+        item.productId || ""
+      ).toLowerCase();
 
     return (
       platformMatch &&
       (productName.includes(search) ||
         productId.includes(search))
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     );
   });
 
   // =========================================================
-<<<<<<< HEAD
-  // MARGIN CALCULATIONS
-=======
   // MARGIN
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   // =========================================================
+
   const calculateMargin = (item) => {
     return (
-      Number(item.bankSettlementAmount || 0) -
+      Number(
+        item.bankSettlementAmount || 0
+      ) -
       Number(item.packagingCost || 0) -
       Number(item.colouringCost || 0)
     );
   };
 
-<<<<<<< HEAD
-  const totalSettlement = filteredSales.reduce(
-    (acc, item) => acc + Number(item.bankSettlementAmount || 0),
-    0
-  );
-  const totalPackaging = filteredSales.reduce(
-    (acc, item) => acc + Number(item.packagingCost || 0),
-    0
-  );
-  const totalColouring = filteredSales.reduce(
-    (acc, item) => acc + Number(item.colouringCost || 0),
-    0
-  );
-  const totalNetMargin = filteredSales.reduce(
-    (acc, item) => acc + calculateMargin(item),
-    0
-  );
-  const totalQty = filteredSales.reduce(
-    (acc, item) => acc + Number(item.quantity || 0),
-    0
-  );
-
-=======
   // =========================================================
   // SUMMARY
   // =========================================================
-  const totalSettlement = filteredSales.reduce(
-    (acc, item) =>
-      acc +
-      Number(item.bankSettlementAmount || 0),
-    0
-  );
 
-  const totalPackaging = filteredSales.reduce(
-    (acc, item) =>
-      acc +
-      Number(item.packagingCost || 0),
-    0
-  );
+  const totalSettlement =
+    filteredSales.reduce(
+      (acc, item) =>
+        acc +
+        Number(
+          item.bankSettlementAmount || 0
+        ),
+      0
+    );
 
-  const totalColouring = filteredSales.reduce(
-    (acc, item) =>
-      acc +
-      Number(item.colouringCost || 0),
-    0
-  );
+  const totalPackaging =
+    filteredSales.reduce(
+      (acc, item) =>
+        acc +
+        Number(
+          item.packagingCost || 0
+        ),
+      0
+    );
 
-  const totalNetMargin = filteredSales.reduce(
-    (acc, item) =>
-      acc + calculateMargin(item),
-    0
-  );
+  const totalColouring =
+    filteredSales.reduce(
+      (acc, item) =>
+        acc +
+        Number(
+          item.colouringCost || 0
+        ),
+      0
+    );
 
-  const totalQty = filteredSales.reduce(
-    (acc, item) =>
-      acc + Number(item.quantity || 0),
-    0
-  );
+  const totalNetMargin =
+    filteredSales.reduce(
+      (acc, item) =>
+        acc + calculateMargin(item),
+      0
+    );
+
+  const totalQty =
+    filteredSales.reduce(
+      (acc, item) =>
+        acc +
+        Number(item.quantity || 0),
+      0
+    );
 
   // =========================================================
   // PRINT
   // =========================================================
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
   const handlePrintPDF = () => {
     window.print();
   };
 
-<<<<<<< HEAD
-  const handleOpenAddModal = () => {
-    setEditingId(null);
-    setFormData({
-      ...initialFormState,
-      platform: selectedPlatform,
-    });
-    setIsModalOpen(true);
-  };
+  // =========================================================
+  // ADD MODAL
+  // =========================================================
 
-  const handleOpenEditModal = (item) => {
-    setEditingId(item._id);
-=======
-  // =========================================================
-  // OPEN ADD MODAL
-  // =========================================================
   const handleOpenAddModal = () => {
     setEditingId(null);
 
@@ -285,43 +300,31 @@ const SalesPage = () => {
       platform: selectedPlatform,
     });
 
+    setErrorMessage("");
+
     setIsModalOpen(true);
   };
 
   // =========================================================
-  // OPEN EDIT MODAL
+  // EDIT MODAL
   // =========================================================
+
   const handleOpenEditModal = (item) => {
     setEditingId(item._id);
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     setFormData({
       productId: item.productId || "",
       productName: item.productName || "",
       productImage: item.productImage || "",
-<<<<<<< HEAD
-      platform: item.platform || "meesho",
-      date: item.date || new Date().toISOString().split("T")[0],
-      quantity: item.quantity || 1,
-      bankSettlementAmount: item.bankSettlementAmount || "",
-      packagingCost: item.packagingCost || 0,
-      colouringCost: item.colouringCost || 0,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image 5MB se chhoti honi chahiye.");
-=======
       imageFile: null,
-      platform: item.platform || "meesho",
+      platform:
+        item.platform || "meesho",
       date:
         item.date ||
-        new Date().toISOString().split("T")[0],
+        item.saleDate ||
+        new Date()
+          .toISOString()
+          .split("T")[0],
       quantity: item.quantity || 1,
       bankSettlementAmount:
         item.bankSettlementAmount ?? "",
@@ -331,55 +334,49 @@ const SalesPage = () => {
         item.colouringCost ?? 0,
     });
 
+    setErrorMessage("");
+
     setIsModalOpen(true);
   };
 
   // =========================================================
   // IMAGE CHANGE
   // =========================================================
+
   const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
       alert(
         "Image 5MB se chhoti honi chahiye."
       );
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       e.target.value = "";
+
       return;
     }
 
-<<<<<<< HEAD
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prev) => ({
-        ...prev,
-        productImage: reader.result,
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // =========================================================
-  // SUBMIT (ADD / UPDATE)
-  // =========================================================
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-=======
     if (!file.type.startsWith("image/")) {
       alert("Sirf image file select karo.");
 
       e.target.value = "";
+
       return;
+    }
+
+    // Remove previous object URL
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(
+        previewUrlRef.current
+      );
     }
 
     const previewUrl =
       URL.createObjectURL(file);
+
+    previewUrlRef.current = previewUrl;
 
     setFormData((prev) => ({
       ...prev,
@@ -391,7 +388,16 @@ const SalesPage = () => {
   // =========================================================
   // REMOVE IMAGE
   // =========================================================
+
   const handleRemoveImage = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(
+        previewUrlRef.current
+      );
+
+      previewUrlRef.current = null;
+    }
+
     setFormData((prev) => ({
       ...prev,
       imageFile: null,
@@ -402,51 +408,52 @@ const SalesPage = () => {
   // =========================================================
   // CLOSE MODAL
   // =========================================================
+
   const handleCloseModal = () => {
     if (saving) return;
 
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(
+        previewUrlRef.current
+      );
+
+      previewUrlRef.current = null;
+    }
+
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData(createInitialFormState());
+    setErrorMessage("");
+
+    setFormData(
+      createInitialFormState()
+    );
   };
 
   // =========================================================
-  // ADD / UPDATE SALE
+  // SAVE / UPDATE
   // =========================================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
     if (saving) return;
+
+    const wasEditing =
+      Boolean(editingId);
 
     try {
       setSaving(true);
+      setErrorMessage("");
 
-<<<<<<< HEAD
-      const payload = {
-        productId: String(formData.productId).trim(),
-        productName: String(formData.productName).trim(),
-        productImage: formData.productImage || "",
-        platform: String(formData.platform).toLowerCase(),
-        date: formData.date,
-        quantity: Number(formData.quantity) || 1,
-        bankSettlementAmount: Number(formData.bankSettlementAmount) || 0,
-        packagingCost: Number(formData.packagingCost) || 0,
-        colouringCost: Number(formData.colouringCost) || 0,
-      };
-
-      if (!payload.productId || !payload.productName) {
-        alert("Product ID aur Product Name required hai.");
-        return;
-      }
-
-      if (!payload.date) {
-=======
       const productId =
-        String(formData.productId).trim();
+        String(
+          formData.productId
+        ).trim();
 
       const productName =
-        String(formData.productName).trim();
+        String(
+          formData.productName
+        ).trim();
 
       const platform =
         String(formData.platform)
@@ -478,57 +485,33 @@ const SalesPage = () => {
       // =====================================================
 
       if (!productId) {
-        alert("Product ID required hai.");
+        alert(
+          "Product ID required hai."
+        );
         return;
       }
 
       if (!productName) {
-        alert("Product Name required hai.");
+        alert(
+          "Product Name required hai."
+        );
         return;
       }
 
       if (!platform) {
-        alert("Platform select karo.");
+        alert(
+          "Platform select karo."
+        );
         return;
       }
 
       if (!date) {
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-        alert("Date select karo.");
+        alert(
+          "Date select karo."
+        );
         return;
       }
 
-<<<<<<< HEAD
-      if (payload.quantity < 1) {
-        alert("Quantity kam se kam 1 honi chahiye.");
-        return;
-      }
-
-      const url = editingId ? `${API_URL}/${editingId}` : API_URL;
-      const method = editingId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || `Request failed: ${response.status}`);
-      }
-
-      await loadSales(false);
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData(initialFormState);
-    } catch (error) {
-      console.error("SAVE SALE ERROR:", error);
-      alert(error.message || "Sale save nahi ho saki.");
-=======
       if (
         !Number.isFinite(quantity) ||
         quantity < 1
@@ -575,19 +558,41 @@ const SalesPage = () => {
 
       const data = new FormData();
 
-      data.append("productId", productId);
-      data.append("productName", productName);
-      data.append("platform", platform);
-      data.append("date", date);
-      data.append("quantity", String(quantity));
+      data.append(
+        "productId",
+        productId
+      );
+
+      data.append(
+        "productName",
+        productName
+      );
+
+      data.append(
+        "platform",
+        platform
+      );
+
+      data.append(
+        "date",
+        date
+      );
+
+      data.append(
+        "quantity",
+        String(quantity)
+      );
+
       data.append(
         "bankSettlementAmount",
         String(settlement)
       );
+
       data.append(
         "packagingCost",
         String(packaging)
       );
+
       data.append(
         "colouringCost",
         String(colouring)
@@ -605,28 +610,7 @@ const SalesPage = () => {
       }
 
       // =====================================================
-      // DEBUG
-      // =====================================================
-
-      console.log(
-        "SALE FORM DATA:",
-        {
-          productId,
-          productName,
-          platform,
-          date,
-          quantity,
-          settlement,
-          packaging,
-          colouring,
-          image:
-            formData.imageFile?.name ||
-            "No new image",
-        }
-      );
-
-      // =====================================================
-      // URL + METHOD
+      // URL
       // =====================================================
 
       const url = editingId
@@ -644,23 +628,25 @@ const SalesPage = () => {
       );
 
       // =====================================================
-      // REQUEST
+      // API REQUEST
       // =====================================================
 
-      const response = await fetch(url, {
-        method,
-        body: data,
-      });
-
-      // =====================================================
-      // BACKEND RESPONSE
-      // =====================================================
+      const response =
+        await fetchWithTimeout(
+          url,
+          {
+            method,
+            body: data,
+          }
+        );
 
       const result =
-        await response.json().catch(() => null);
+        await response
+          .json()
+          .catch(() => null);
 
       console.log(
-        "SALE API RESPONSE:",
+        "SALE RESPONSE:",
         result
       );
 
@@ -668,95 +654,121 @@ const SalesPage = () => {
         throw new Error(
           result?.message ||
             result?.error ||
-            `Sale request failed with status ${response.status}`
+            `Request failed: ${response.status}`
         );
       }
 
       // =====================================================
-      // REFRESH
+      // GET RETURNED SALE
       // =====================================================
 
-      await loadSales(false);
+      const returnedSale =
+        result?.sale;
 
       // =====================================================
-      // RESET
+      // UPDATE LOCAL STATE IMMEDIATELY
       // =====================================================
+
+      if (returnedSale) {
+        setSales((prevSales) => {
+          if (wasEditing) {
+            return prevSales.map(
+              (item) =>
+                String(item._id) ===
+                String(editingId)
+                  ? returnedSale
+                  : item
+            );
+          }
+
+          return [
+            returnedSale,
+            ...prevSales,
+          ];
+        });
+      }
+
+      // =====================================================
+      // CLOSE MODAL IMMEDIATELY
+      // =====================================================
+
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(
+          previewUrlRef.current
+        );
+
+        previewUrlRef.current = null;
+      }
 
       setIsModalOpen(false);
       setEditingId(null);
+
       setFormData(
         createInitialFormState()
       );
 
+      // =====================================================
+      // SUCCESS
+      // =====================================================
+
       alert(
-        editingId
+        wasEditing
           ? "Sale updated successfully."
           : "Sale added successfully."
       );
+
+      // IMPORTANT:
+      // Yahan loadSales() intentionally nahi hai.
+      //
+      // Save ke baad GET /sales dobara call nahi hogi.
+      // Isse update/add ke baad waiting bahut kam hogi.
     } catch (error) {
       console.error(
         "SAVE SALE ERROR:",
         error
       );
 
-      alert(
+      const message =
         error.message ||
-          "Sale save nahi ho saki."
-      );
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+        "Sale save nahi ho saki.";
+
+      setErrorMessage(message);
+
+      alert(message);
     } finally {
       setSaving(false);
     }
   };
 
-<<<<<<< HEAD
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Kya aap sach me is sale entry ko delete karna chahte hain?"
-    );
-    if (!confirmDelete) return;
-
-    try {
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || `Delete failed: ${response.status}`);
-      }
-
-      await loadSales(false);
-    } catch (error) {
-      console.error("DELETE SALE ERROR:", error);
-      alert(error.message || "Sale delete nahi ho saki.");
-=======
   // =========================================================
-  // DELETE SALE
+  // DELETE
   // =========================================================
+
   const handleDelete = async (id) => {
     const confirmDelete =
       window.confirm(
         "Kya aap sach me is sale entry ko delete karna chahte hain?"
       );
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) {
+      return;
+    }
 
     try {
-      const response = await fetch(
-        `${API_URL}/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      setErrorMessage("");
+
+      const response =
+        await fetchWithTimeout(
+          `${API_URL}/${id}`,
+          {
+            method: "DELETE",
+          }
+        );
 
       const result =
-        await response.json().catch(() => null);
-
-      console.log(
-        "DELETE SALE RESPONSE:",
-        result
-      );
+        await response
+          .json()
+          .catch(() => null);
 
       if (!response.ok) {
         throw new Error(
@@ -766,7 +778,14 @@ const SalesPage = () => {
         );
       }
 
-      await loadSales(false);
+      // Remove immediately from UI
+      setSales((prevSales) =>
+        prevSales.filter(
+          (item) =>
+            String(item._id) !==
+            String(id)
+        )
+      );
 
       alert(
         "Sale deleted successfully."
@@ -777,35 +796,27 @@ const SalesPage = () => {
         error
       );
 
-      alert(
+      const message =
         error.message ||
-          "Sale delete nahi ho saki."
-      );
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+        "Sale delete nahi ho saki.";
+
+      setErrorMessage(message);
+
+      alert(message);
     }
   };
 
+  // =========================================================
+  // RETURN
+  // =========================================================
+
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
-      <style>{`
-        @media print {
-          @page { size: A4 portrait; margin: 10mm; }
-          .no-print { display: none !important; }
-          body { background: #ffffff !important; color: #000000 !important; font-size: 11px !important; }
-          .print-area { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
-          .print-table-wrapper { overflow: visible !important; }
-          table { width: 100% !important; table-layout: fixed !important; word-wrap: break-word !important; }
-          th, td { padding: 6px 4px !important; font-size: 10px !important; }
-          .print-img { display: none !important; }
-        }
-      `}</style>
 
-      {/* HEADER */}
-=======
       {/* =====================================================
           PRINT CSS
       ===================================================== */}
+
       <style>{`
         @media print {
           @page {
@@ -857,35 +868,35 @@ const SalesPage = () => {
       {/* =====================================================
           HEADER
       ===================================================== */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-      <div className="no-print flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-            Marketplace Sales
-          </h1>
-<<<<<<< HEAD
-=======
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+      <div className="no-print flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+        <div>
+          <div className="flex items-center gap-2">
+
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white">
+              Marketplace Sales
+            </h1>
+
+            {refreshing && (
+              <span className="text-[10px] font-bold text-slate-400">
+                Syncing...
+              </span>
+            )}
+
+          </div>
+
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Manage orders, edits, settlements and profit margins
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-<<<<<<< HEAD
-          <div className="flex rounded-xl bg-slate-200/80 p-1 dark:bg-slate-800">
-            {[
-              { id: "meesho", name: "Meesho", icon: "🔴" },
-              { id: "amazon", name: "Amazon", icon: "📦" },
-              { id: "flipkart", name: "Flipkart", icon: "🟡" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedPlatform(tab.id)}
-=======
+
           {/* PLATFORM */}
+
           <div className="flex rounded-xl bg-slate-200/80 p-1 dark:bg-slate-800">
+
             {[
               {
                 id: "meesho",
@@ -907,99 +918,119 @@ const SalesPage = () => {
                 key={tab.id}
                 type="button"
                 onClick={() =>
-                  setSelectedPlatform(tab.id)
+                  setSelectedPlatform(
+                    tab.id
+                  )
                 }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                 className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${
-                  selectedPlatform === tab.id
+                  selectedPlatform ===
+                  tab.id
                     ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                 }`}
               >
-                <span>{tab.icon}</span>
-                <span>{tab.name}</span>
+                <span>
+                  {tab.icon}
+                </span>
+
+                <span>
+                  {tab.name}
+                </span>
               </button>
             ))}
+
           </div>
 
-<<<<<<< HEAD
-          <button
-=======
           {/* PRINT */}
+
           <button
             type="button"
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
             onClick={handlePrintPDF}
             className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-red-700"
           >
             <span>🖨️</span>
-            <span>Print / Save PDF</span>
+            <span>
+              Print / Save PDF
+            </span>
           </button>
 
-<<<<<<< HEAD
-          <button
-=======
           {/* ADD */}
+
           <button
             type="button"
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-            onClick={handleOpenAddModal}
+            onClick={
+              handleOpenAddModal
+            }
             className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
             <span>➕</span>
-            <span>Add Sale Entry</span>
+
+            <span>
+              Add Sale Entry
+            </span>
           </button>
+
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* SEARCH */}
-      <div className="no-print flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
-        <span className="text-slate-400">🔍</span>
-=======
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
+
+      {errorMessage && (
+        <div className="no-print flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+
+          <span>
+            {errorMessage}
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setErrorMessage("")
+            }
+            className="font-bold"
+          >
+            ×
+          </button>
+
+        </div>
+      )}
+
       {/* =====================================================
           SEARCH
       ===================================================== */}
+
       <div className="no-print flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
+
         <span className="text-slate-400">
           🔍
         </span>
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
         <input
           type="text"
           placeholder="Search by Product Name or ID..."
           value={searchTerm}
-<<<<<<< HEAD
-          onChange={(e) => setSearchTerm(e.target.value)}
-=======
           onChange={(e) =>
-            setSearchTerm(e.target.value)
+            setSearchTerm(
+              e.target.value
+            )
           }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
           className="w-full bg-transparent text-sm focus:outline-none dark:text-white"
         />
+
       </div>
 
-<<<<<<< HEAD
-      {/* TABLE */}
-      <div className="print-area space-y-6">
-        <div className="hidden border-b border-slate-300 pb-2 print:block">
-          <h2 className="text-lg font-black text-slate-900">
-            Sales & Margin Report ({selectedPlatform.toUpperCase()})
-          </h2>
-          <p className="text-[10px] text-slate-600">
-            Date Generated: {new Date().toLocaleDateString("en-IN")}
-          </p>
-        </div>
-
-=======
       {/* =====================================================
           PRINT AREA
       ===================================================== */}
+
       <div className="print-area space-y-6">
+
         {/* PRINT HEADER */}
+
         <div className="hidden border-b border-slate-300 pb-2 print:block">
+
           <h2 className="text-lg font-black text-slate-900">
             Sales & Margin Report (
             {selectedPlatform.toUpperCase()}
@@ -1012,34 +1043,23 @@ const SalesPage = () => {
               "en-IN"
             )}
           </p>
+
         </div>
 
         {/* =====================================================
             TABLE
         ===================================================== */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
         <div className="print-table-wrapper overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 print:border-slate-300">
+
           <div className="overflow-x-auto print:overflow-visible">
+
             <table className="w-full text-left text-xs sm:text-sm">
+
               <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400 print:border-slate-300 print:bg-slate-100 print:text-slate-800">
+
                 <tr>
-<<<<<<< HEAD
-                  <th className="w-[25%] px-3 py-3 print:w-[22%]">Product</th>
-                  <th className="w-[12%] px-3 py-3">Product ID</th>
-                  <th className="w-[11%] px-3 py-3">Date</th>
-                  <th className="w-[6%] px-2 py-3 text-center">Qty</th>
-                  <th className="w-[15%] px-3 py-3">Bank Settlement</th>
-                  <th className="w-[10%] px-3 py-3">Packaging</th>
-                  <th className="w-[11%] px-3 py-3">Colouring</th>
-                  <th className="w-[10%] px-3 py-3 font-extrabold text-emerald-600 dark:text-emerald-400 print:text-emerald-800">Margin</th>
-                  <th className="no-print w-[10%] px-3 py-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan="9" className="py-12 text-center text-slate-400">
-=======
+
                   <th className="w-[25%] px-3 py-3 print:w-[22%]">
                     Product
                   </th>
@@ -1075,279 +1095,259 @@ const SalesPage = () => {
                   <th className="no-print w-[10%] px-3 py-3 text-center">
                     Actions
                   </th>
+
                 </tr>
+
               </thead>
 
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 print:divide-slate-200">
+
                 {loading ? (
                   <tr>
+
                     <td
                       colSpan="9"
                       className="py-12 text-center text-slate-400"
                     >
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                      Loading sales...
+
+                      <div className="flex flex-col items-center gap-2">
+
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-700 dark:border-t-white" />
+
+                        <span>
+                          Loading sales...
+                        </span>
+
+                      </div>
+
                     </td>
+
                   </tr>
                 ) : filteredSales.length === 0 ? (
                   <tr>
-<<<<<<< HEAD
-                    <td colSpan="9" className="py-12 text-center text-slate-400">
-                      No sales entry found for {selectedPlatform.toUpperCase()}.
-=======
+
                     <td
                       colSpan="9"
                       className="py-12 text-center text-slate-400"
                     >
                       No sales entry found for{" "}
                       {selectedPlatform.toUpperCase()}.
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                     </td>
+
                   </tr>
                 ) : (
-                  filteredSales.map((item) => {
-<<<<<<< HEAD
-                    const margin = calculateMargin(item);
-                    return (
-                      <tr key={item._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                        <td className="px-3 py-2.5">
-                          <div
-                            onClick={() => setPreviewProduct(item)}
-=======
-                    const margin =
-                      calculateMargin(item);
+                  filteredSales.map(
+                    (item) => {
+                      const margin =
+                        calculateMargin(
+                          item
+                        );
 
-                    return (
-                      <tr
-                        key={item._id}
-                        className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
-                      >
-                        {/* PRODUCT */}
-                        <td className="px-3 py-2.5">
-                          <div
-                            onClick={() =>
-                              setPreviewProduct(
-                                item
-                              )
-                            }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                            className="group flex cursor-pointer items-center gap-2"
-                            title="Click to Preview Product"
-                          >
-                            {item.productImage ? (
-                              <img
-<<<<<<< HEAD
-                                src={item.productImage}
-                                alt={item.productName}
-=======
-                                src={
-                                  item.productImage
-                                }
-                                alt={
-                                  item.productName
-                                }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                                className="print-img h-8 w-8 shrink-0 rounded-lg border border-slate-200 object-cover transition group-hover:scale-105 dark:border-slate-700"
-                              />
-                            ) : (
-                              <div className="print-img flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-xs dark:border-slate-700 dark:bg-slate-800">
-                                🖼️
-                              </div>
-                            )}
-<<<<<<< HEAD
-                            <span className="leading-tight font-bold text-slate-800 underline-offset-2 group-hover:text-blue-600 group-hover:underline dark:text-slate-100 dark:group-hover:text-blue-400 print:text-black">
-                              {item.productName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 print:text-slate-700">
-                          {item.productId}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-[11px] text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          {item.date}
-                        </td>
-                        <td className="px-2 py-2.5 text-center font-bold print:text-black">
-                          {item.quantity}
-                        </td>
-                        <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white print:text-black">
-                          ₹{Number(item.bankSettlementAmount || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          ₹{Number(item.packagingCost || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          ₹{Number(item.colouringCost || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-3 py-2.5 font-black text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
-                          ₹{margin.toLocaleString("en-IN")}
-                        </td>
-                        <td className="no-print px-3 py-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => setPreviewProduct(item)}
-=======
+                      return (
+                        <tr
+                          key={
+                            item._id
+                          }
+                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
+                        >
 
-                            <span className="leading-tight font-bold text-slate-800 underline-offset-2 group-hover:text-blue-600 group-hover:underline dark:text-slate-100 dark:group-hover:text-blue-400 print:text-black">
-                              {
-                                item.productName
-                              }
-                            </span>
-                          </div>
-                        </td>
+                          {/* PRODUCT */}
 
-                        {/* PRODUCT ID */}
-                        <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 print:text-slate-700">
-                          {item.productId}
-                        </td>
+                          <td className="px-3 py-2.5">
 
-                        {/* DATE */}
-                        <td className="whitespace-nowrap px-3 py-2.5 text-[11px] text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          {item.date}
-                        </td>
-
-                        {/* QTY */}
-                        <td className="px-2 py-2.5 text-center font-bold print:text-black">
-                          {item.quantity}
-                        </td>
-
-                        {/* SETTLEMENT */}
-                        <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white print:text-black">
-                          ₹
-                          {Number(
-                            item.bankSettlementAmount ||
-                              0
-                          ).toLocaleString(
-                            "en-IN"
-                          )}
-                        </td>
-
-                        {/* PACKAGING */}
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          ₹
-                          {Number(
-                            item.packagingCost || 0
-                          ).toLocaleString(
-                            "en-IN"
-                          )}
-                        </td>
-
-                        {/* COLOURING */}
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
-                          ₹
-                          {Number(
-                            item.colouringCost || 0
-                          ).toLocaleString(
-                            "en-IN"
-                          )}
-                        </td>
-
-                        {/* MARGIN */}
-                        <td className="px-3 py-2.5 font-black text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
-                          ₹
-                          {margin.toLocaleString(
-                            "en-IN"
-                          )}
-                        </td>
-
-                        {/* ACTIONS */}
-                        <td className="no-print px-3 py-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
+                            <div
                               onClick={() =>
                                 setPreviewProduct(
                                   item
                                 )
                               }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                              className="rounded-lg p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                              title="Preview"
+                              className="group flex cursor-pointer items-center gap-2"
+                              title="Click to Preview Product"
                             >
-                              👁️
-                            </button>
-<<<<<<< HEAD
-                            <button
-                              onClick={() => handleOpenEditModal(item)}
-=======
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleOpenEditModal(
-                                  item
-                                )
-                              }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                              className="rounded-lg p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-                              title="Edit"
-                            >
-                              ✏️
-                            </button>
-<<<<<<< HEAD
-                            <button
-                              onClick={() => handleDelete(item._id)}
-=======
+                              {item.productImage ? (
+                                <img
+                                  src={
+                                    item.productImage
+                                  }
+                                  alt={
+                                    item.productName
+                                  }
+                                  loading="lazy"
+                                  className="print-img h-8 w-8 shrink-0 rounded-lg border border-slate-200 object-cover transition group-hover:scale-105 dark:border-slate-700"
+                                />
+                              ) : (
+                                <div className="print-img flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-xs dark:border-slate-700 dark:bg-slate-800">
+                                  🖼️
+                                </div>
+                              )}
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDelete(
-                                  item._id
-                                )
-                              }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-                              className="rounded-lg p-1 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
-                              title="Delete"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                              <span className="leading-tight font-bold text-slate-800 underline-offset-2 group-hover:text-blue-600 group-hover:underline dark:text-slate-100 dark:group-hover:text-blue-400 print:text-black">
+                                {
+                                  item.productName
+                                }
+                              </span>
+
+                            </div>
+
+                          </td>
+
+                          {/* PRODUCT ID */}
+
+                          <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 print:text-slate-700">
+                            {
+                              item.productId
+                            }
+                          </td>
+
+                          {/* DATE */}
+
+                          <td className="whitespace-nowrap px-3 py-2.5 text-[11px] text-slate-600 dark:text-slate-400 print:text-slate-700">
+                            {item.date ||
+                              item.saleDate ||
+                              "-"}
+                          </td>
+
+                          {/* QTY */}
+
+                          <td className="px-2 py-2.5 text-center font-bold print:text-black">
+                            {
+                              item.quantity
+                            }
+                          </td>
+
+                          {/* SETTLEMENT */}
+
+                          <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white print:text-black">
+                            ₹
+                            {Number(
+                              item.bankSettlementAmount ||
+                                0
+                            ).toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          {/* PACKAGING */}
+
+                          <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
+                            ₹
+                            {Number(
+                              item.packagingCost ||
+                                0
+                            ).toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          {/* COLOURING */}
+
+                          <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 print:text-slate-700">
+                            ₹
+                            {Number(
+                              item.colouringCost ||
+                                0
+                            ).toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          {/* MARGIN */}
+
+                          <td className="px-3 py-2.5 font-black text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
+                            ₹
+                            {margin.toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          {/* ACTIONS */}
+
+                          <td className="no-print px-3 py-2.5 text-center">
+
+                            <div className="flex items-center justify-center gap-1">
+
+                              {/* PREVIEW */}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewProduct(
+                                    item
+                                  )
+                                }
+                                className="rounded-lg p-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                title="Preview"
+                              >
+                                👁️
+                              </button>
+
+                              {/* EDIT */}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenEditModal(
+                                    item
+                                  )
+                                }
+                                className="rounded-lg p-1 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+                                title="Edit"
+                              >
+                                ✏️
+                              </button>
+
+                              {/* DELETE */}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDelete(
+                                    item._id
+                                  )
+                                }
+                                className="rounded-lg p-1 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                                title="Delete"
+                              >
+                                🗑️
+                              </button>
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+                      );
+                    }
+                  )
                 )}
+
               </tbody>
+
             </table>
+
           </div>
+
         </div>
 
-<<<<<<< HEAD
-        {/* SUMMARY */}
-=======
         {/* =====================================================
             SUMMARY
         ===================================================== */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
         <div className="rounded-2xl border border-slate-200 bg-slate-900 p-4 text-white dark:border-slate-800 dark:bg-slate-950 print:border-slate-300 print:bg-slate-100 print:text-black">
+
           <div className="mb-2 border-b border-slate-800 pb-1.5 print:border-slate-300">
+
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 print:text-slate-700">
               {selectedPlatform.toUpperCase()} Total Summary
             </p>
+
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-5 sm:text-left print:grid-cols-5 print:text-left">
+
             <div>
-<<<<<<< HEAD
-              <p className="text-[10px] text-slate-400 print:text-slate-600">Total Qty</p>
-              <p className="text-sm font-black text-white print:text-black">{totalQty} units</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 print:text-slate-600">Total Settlement</p>
-              <p className="text-sm font-black text-white print:text-black">₹{totalSettlement.toLocaleString("en-IN")}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 print:text-slate-600">Total Packaging</p>
-              <p className="text-sm font-bold text-rose-300 print:text-rose-700">− ₹{totalPackaging.toLocaleString("en-IN")}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 print:text-slate-600">Total Painting</p>
-              <p className="text-sm font-bold text-rose-300 print:text-rose-700">− ₹{totalColouring.toLocaleString("en-IN")}</p>
-            </div>
-            <div className="col-span-2 rounded-xl border border-emerald-800/50 bg-emerald-950/60 p-2 sm:col-span-1 print:col-span-1 print:border-emerald-300 print:bg-emerald-50">
-              <p className="text-[10px] font-bold uppercase text-emerald-400 print:text-emerald-800">Net Profit</p>
-              <p className="text-base font-black text-emerald-300 print:text-emerald-900">₹{totalNetMargin.toLocaleString("en-IN")}</p>
-=======
+
               <p className="text-[10px] text-slate-400 print:text-slate-600">
                 Total Qty
               </p>
@@ -1355,9 +1355,11 @@ const SalesPage = () => {
               <p className="text-sm font-black text-white print:text-black">
                 {totalQty} units
               </p>
+
             </div>
 
             <div>
+
               <p className="text-[10px] text-slate-400 print:text-slate-600">
                 Total Settlement
               </p>
@@ -1368,9 +1370,11 @@ const SalesPage = () => {
                   "en-IN"
                 )}
               </p>
+
             </div>
 
             <div>
+
               <p className="text-[10px] text-slate-400 print:text-slate-600">
                 Total Packaging
               </p>
@@ -1381,9 +1385,11 @@ const SalesPage = () => {
                   "en-IN"
                 )}
               </p>
+
             </div>
 
             <div>
+
               <p className="text-[10px] text-slate-400 print:text-slate-600">
                 Total Painting
               </p>
@@ -1394,9 +1400,11 @@ const SalesPage = () => {
                   "en-IN"
                 )}
               </p>
+
             </div>
 
             <div className="col-span-2 rounded-xl border border-emerald-800/50 bg-emerald-950/60 p-2 sm:col-span-1 print:col-span-1 print:border-emerald-300 print:bg-emerald-50">
+
               <p className="text-[10px] font-bold uppercase text-emerald-400 print:text-emerald-800">
                 Net Profit
               </p>
@@ -1407,94 +1415,62 @@ const SalesPage = () => {
                   "en-IN"
                 )}
               </p>
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
             </div>
+
           </div>
+
         </div>
+
       </div>
 
-<<<<<<< HEAD
-      {/* PREVIEW MODAL */}
-=======
       {/* =====================================================
           PRODUCT PREVIEW MODAL
       ===================================================== */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
       {previewProduct && (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+
             <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+
               <div>
+
                 <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {previewProduct.platform}
+                  {
+                    previewProduct.platform
+                  }
                 </span>
-<<<<<<< HEAD
-                <p className="mt-0.5 font-mono text-xs text-slate-400">{previewProduct.productId}</p>
-              </div>
-              <button
-                onClick={() => setPreviewProduct(null)}
-=======
 
                 <p className="mt-0.5 font-mono text-xs text-slate-400">
-                  {previewProduct.productId}
+                  {
+                    previewProduct.productId
+                  }
                 </p>
+
               </div>
 
               <button
                 type="button"
                 onClick={() =>
-                  setPreviewProduct(null)
+                  setPreviewProduct(
+                    null
+                  )
                 }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                 className="rounded-lg p-1 text-xl font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 ×
               </button>
-            </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+            </div>
+
             <div className="space-y-4">
+
               <div className="flex h-52 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+
                 {previewProduct.productImage ? (
                   <img
-<<<<<<< HEAD
-                    src={previewProduct.productImage}
-                    alt={previewProduct.productName}
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <span className="text-4xl">🖼️</span>
-                )}
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">{previewProduct.productName}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Order Date: {previewProduct.date}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800/50">
-                <div>
-                  <span className="text-slate-400">Quantity:</span>
-                  <p className="font-bold text-slate-800 dark:text-white">{previewProduct.quantity} units</p>
-                </div>
-                <div>
-                  <span className="text-slate-400">Bank Settlement:</span>
-                  <p className="font-bold text-slate-800 dark:text-white">₹{Number(previewProduct.bankSettlementAmount || 0).toLocaleString("en-IN")}</p>
-                </div>
-                <div>
-                  <span className="text-slate-400">Packaging Cost:</span>
-                  <p className="font-medium text-rose-500">₹{Number(previewProduct.packagingCost || 0).toLocaleString("en-IN")}</p>
-                </div>
-                <div>
-                  <span className="text-slate-400">Colouring Cost:</span>
-                  <p className="font-medium text-rose-500">₹{Number(previewProduct.colouringCost || 0).toLocaleString("en-IN")}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800/40 dark:bg-emerald-950/40">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Net Margin On Sale</span>
-                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                  ₹{calculateMargin(previewProduct).toLocaleString("en-IN")}
-=======
                     src={
                       previewProduct.productImage
                     }
@@ -1508,9 +1484,11 @@ const SalesPage = () => {
                     🖼️
                   </span>
                 )}
+
               </div>
 
               <div>
+
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
                   {
                     previewProduct.productName
@@ -1519,11 +1497,15 @@ const SalesPage = () => {
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Order Date:{" "}
-                  {previewProduct.date}
+                  {previewProduct.date ||
+                    previewProduct.saleDate ||
+                    "-"}
                 </p>
+
               </div>
 
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-800/50">
+
                 <div>
                   <span className="text-slate-400">
                     Quantity:
@@ -1584,9 +1566,11 @@ const SalesPage = () => {
                     )}
                   </p>
                 </div>
+
               </div>
 
               <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800/40 dark:bg-emerald-950/40">
+
                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
                   Net Margin On Sale
                 </span>
@@ -1598,33 +1582,29 @@ const SalesPage = () => {
                   ).toLocaleString(
                     "en-IN"
                   )}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                 </span>
+
               </div>
+
             </div>
+
           </div>
+
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* ADD / EDIT MODAL */}
-=======
       {/* =====================================================
           ADD / EDIT MODAL
       ===================================================== */}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
       {isModalOpen && (
         <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+
           <div className="max-h-[95vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+
               <h2 className="text-lg font-black text-slate-900 dark:text-white">
-<<<<<<< HEAD
-                {editingId ? "Edit Sale Entry" : "Add New Sale Entry"}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-xl font-bold text-slate-400 hover:text-slate-600 dark:hover:text-white"
-=======
                 {editingId
                   ? "Edit Sale Entry"
                   : "Add New Sale Entry"}
@@ -1632,45 +1612,28 @@ const SalesPage = () => {
 
               <button
                 type="button"
-                onClick={handleCloseModal}
+                onClick={
+                  handleCloseModal
+                }
                 disabled={saving}
                 className="text-xl font-bold text-slate-400 hover:text-slate-600 disabled:opacity-50 dark:hover:text-white"
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
               >
                 ×
               </button>
+
             </div>
 
-<<<<<<< HEAD
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Platform</label>
-                  <select
-                    value={formData.platform}
-                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value="meesho">Meesho</option>
-                    <option value="amazon">Amazon</option>
-                    <option value="flipkart">Flipkart</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-=======
             <form
               onSubmit={handleSubmit}
               className="space-y-4"
             >
+
               {/* PLATFORM + DATE */}
+
               <div className="grid grid-cols-2 gap-3">
+
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Platform
                   </label>
@@ -1690,6 +1653,7 @@ const SalesPage = () => {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
+
                     <option value="meesho">
                       Meesho
                     </option>
@@ -1701,10 +1665,13 @@ const SalesPage = () => {
                     <option value="flipkart">
                       Flipkart
                     </option>
+
                   </select>
+
                 </div>
 
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Date
                   </label>
@@ -1719,43 +1686,31 @@ const SalesPage = () => {
                       setFormData(
                         (prev) => ({
                           ...prev,
-                          date:
-                            e.target.value,
+                          date: e.target.value,
                         })
                       )
                     }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
+
               </div>
 
-<<<<<<< HEAD
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Product ID / SKU</label>
-=======
               {/* PRODUCT ID + QUANTITY */}
+
               <div className="grid grid-cols-2 gap-3">
+
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
-                    Product ID
+                    Product ID / SKU
                   </label>
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                   <input
                     type="text"
                     required
                     placeholder="PRD-101"
-<<<<<<< HEAD
-                    value={formData.productId}
-                    onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Quantity</label>
-=======
                     value={
                       formData.productId
                     }
@@ -1770,22 +1725,19 @@ const SalesPage = () => {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Quantity
                   </label>
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                   <input
                     type="number"
                     min="1"
                     required
-<<<<<<< HEAD
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-=======
                     value={
                       formData.quantity
                     }
@@ -1798,31 +1750,25 @@ const SalesPage = () => {
                         })
                       )
                     }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
+
               </div>
 
-<<<<<<< HEAD
-              <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Product Name</label>
-=======
               {/* PRODUCT NAME */}
+
               <div>
+
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                   Product Name
                 </label>
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                 <input
                   type="text"
                   required
                   placeholder="Ganesha Idol"
-<<<<<<< HEAD
-                  value={formData.productName}
-                  onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-=======
                   value={
                     formData.productName
                   }
@@ -1835,35 +1781,21 @@ const SalesPage = () => {
                       })
                     )
                   }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
+
               </div>
 
-<<<<<<< HEAD
-              <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Product Image</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-xs file:font-bold file:text-slate-700 hover:file:bg-slate-300 dark:file:bg-slate-800 dark:file:text-slate-200"
-                  />
-                  {formData.productImage && (
-                    <img
-                      src={formData.productImage}
-                      alt="Preview"
-                      className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
-                    />
-=======
               {/* IMAGE */}
+
               <div>
+
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                   Product Image
                 </label>
 
                 <div className="mt-1 space-y-3">
+
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -1875,6 +1807,7 @@ const SalesPage = () => {
 
                   {formData.productImage && (
                     <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
+
                       <img
                         src={
                           formData.productImage
@@ -1884,6 +1817,7 @@ const SalesPage = () => {
                       />
 
                       <div className="flex-1">
+
                         <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
                           Image Preview
                         </p>
@@ -1891,6 +1825,7 @@ const SalesPage = () => {
                         <p className="text-[10px] text-slate-400">
                           Max size: 5MB
                         </p>
+
                       </div>
 
                       <button
@@ -1902,47 +1837,20 @@ const SalesPage = () => {
                       >
                         Remove
                       </button>
+
                     </div>
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                   )}
+
                 </div>
+
               </div>
 
-<<<<<<< HEAD
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Bank Settlement (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    placeholder="1200"
-                    value={formData.bankSettlementAmount}
-                    onChange={(e) => setFormData({ ...formData, bankSettlementAmount: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Packaging (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.packagingCost}
-                    onChange={(e) => setFormData({ ...formData, packagingCost: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">Colouring (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.colouringCost}
-                    onChange={(e) => setFormData({ ...formData, colouringCost: e.target.value })}
-=======
               {/* AMOUNTS */}
+
               <div className="grid grid-cols-3 gap-3">
+
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Bank Settlement (₹)
                   </label>
@@ -1967,9 +1875,11 @@ const SalesPage = () => {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Packaging (₹)
                   </label>
@@ -1992,9 +1902,11 @@ const SalesPage = () => {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
 
                 <div>
+
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                     Colouring (₹)
                   </label>
@@ -2015,55 +1927,51 @@ const SalesPage = () => {
                         })
                       )
                     }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+
                 </div>
+
               </div>
 
-<<<<<<< HEAD
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-=======
               {/* BUTTONS */}
+
               <div className="flex justify-end gap-3 pt-4">
+
                 <button
                   type="button"
                   onClick={
                     handleCloseModal
                   }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                   disabled={saving}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
-<<<<<<< HEAD
-=======
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
                 <button
                   type="submit"
                   disabled={saving}
                   className="rounded-xl bg-slate-950 px-5 py-2 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                 >
-<<<<<<< HEAD
-                  {saving ? "Saving..." : editingId ? "Save Changes" : "Save Entry"}
-=======
+
                   {saving
                     ? "Saving..."
                     : editingId
                     ? "Save Changes"
                     : "Save Entry"}
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+
                 </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
       )}
+
     </div>
   );
 };

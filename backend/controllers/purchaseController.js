@@ -1,47 +1,5 @@
 const Purchase = require("../models/Purchase");
-<<<<<<< HEAD
-
-// ==========================================
-// GET ALL PURCHASES (FAST LEAN FETCH + PAGINATION)
-// ==========================================
-const getPurchases = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
-
-    // Agar query me page aur limit aaye toh pagination karega
-    if (page && limit) {
-      const skip = (page - 1) * limit;
-
-      const [purchases, total] = await Promise.all([
-        Purchase.find()
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Purchase.countDocuments(),
-      ]);
-
-      return res.status(200).json({
-        success: true,
-        count: total,
-        page,
-        pages: Math.ceil(total / limit),
-        purchases,
-      });
-    }
-
-    // Default fast fetch
-    const purchases = await Purchase.find()
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json(purchases);
-  } catch (error) {
-    console.error("GET PURCHASES ERROR:", error);
-    return res.status(500).json({
-      success: false,
-=======
+const Product = require("../models/Product");
 const cloudinary = require("../config/cloudinary");
 
 // =====================================================
@@ -68,11 +26,36 @@ const uploadToCloudinary = (fileBuffer) => {
 };
 
 // =====================================================
+// GET CLOUDINARY IMAGE URL
+// Supports both multer-storage-cloudinary and memory
+// =====================================================
+const getUploadedImageUrl = (file) => {
+  if (!file) return "";
+
+  if (file.path) {
+    return file.path;
+  }
+
+  if (file.secure_url) {
+    return file.secure_url;
+  }
+
+  if (file.url) {
+    return file.url;
+  }
+
+  return "";
+};
+
+// =====================================================
 // DELETE CLOUDINARY IMAGE
 // =====================================================
 const deleteFromCloudinary = async (imageUrl) => {
   try {
-    if (!imageUrl || !imageUrl.includes("cloudinary.com")) {
+    if (
+      !imageUrl ||
+      !imageUrl.includes("cloudinary.com")
+    ) {
       return;
     }
 
@@ -86,7 +69,6 @@ const deleteFromCloudinary = async (imageUrl) => {
 
     let publicIdParts = parts.slice(uploadIndex + 1);
 
-    // Remove version folder such as v123456
     if (
       publicIdParts[0] &&
       /^v\d+$/.test(publicIdParts[0])
@@ -117,33 +99,74 @@ const deleteFromCloudinary = async (imageUrl) => {
 };
 
 // =====================================================
+// VALIDATE PRODUCT
+// =====================================================
+const findProduct = async (productId) => {
+  if (!productId) {
+    return null;
+  }
+
+  return await Product.findById(productId);
+};
+
+// =====================================================
 // GET ALL PURCHASES
 // =====================================================
 const getPurchases = async (req, res) => {
   try {
-    const purchases = await Purchase.find().sort({
-      createdAt: -1,
-    });
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
 
-    res.status(200).json(purchases);
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+
+      const [purchases, total] = await Promise.all([
+        Purchase.find()
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+
+        Purchase.countDocuments(),
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        count: total,
+        page,
+        pages: Math.ceil(total / limit),
+        purchases,
+      });
+    }
+
+    const purchases = await Purchase.find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      count: purchases.length,
+      purchases,
+    });
   } catch (error) {
     console.error("GET PURCHASES ERROR:", error);
 
-    res.status(500).json({
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+    return res.status(500).json({
+      success: false,
       message: "Failed to fetch purchases",
       error: error.message,
     });
   }
 };
 
-<<<<<<< HEAD
-// ==========================================
+// =====================================================
 // GET SINGLE PURCHASE
-// ==========================================
+// =====================================================
 const getPurchaseById = async (req, res) => {
   try {
-    const purchase = await Purchase.findById(req.params.id).lean();
+    const purchase = await Purchase.findById(
+      req.params.id
+    ).lean();
 
     if (!purchase) {
       return res.status(404).json({
@@ -155,45 +178,18 @@ const getPurchaseById = async (req, res) => {
     return res.status(200).json(purchase);
   } catch (error) {
     console.error("GET PURCHASE ERROR:", error);
+
     return res.status(500).json({
       success: false,
-=======
-// =====================================================
-// GET SINGLE PURCHASE
-// =====================================================
-const getPurchaseById = async (req, res) => {
-  try {
-    const purchase = await Purchase.findById(
-      req.params.id
-    );
-
-    if (!purchase) {
-      return res.status(404).json({
-        message: "Purchase not found",
-      });
-    }
-
-    res.status(200).json(purchase);
-  } catch (error) {
-    console.error("GET PURCHASE ERROR:", error);
-
-    res.status(500).json({
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       message: "Failed to fetch purchase",
       error: error.message,
     });
   }
 };
 
-<<<<<<< HEAD
-// ==========================================
-// CREATE PURCHASE (DIRECT INSERT - NO OBJECTID CRASH)
-// ==========================================
-=======
 // =====================================================
 // CREATE PURCHASE
 // =====================================================
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 const createPurchase = async (req, res) => {
   try {
     const {
@@ -203,16 +199,11 @@ const createPurchase = async (req, res) => {
       rawCost,
       supplierName,
       quantity,
-<<<<<<< HEAD
-      productImage,
     } = req.body;
 
-    if (!productId || !purchaseDate || !productName || !supplierName) {
-      return res.status(400).json({
-        success: false,
-=======
-    } = req.body;
-
+    // -------------------------------------------------
+    // BASIC VALIDATION
+    // -------------------------------------------------
     if (
       !productId ||
       !purchaseDate ||
@@ -220,116 +211,136 @@ const createPurchase = async (req, res) => {
       !supplierName
     ) {
       return res.status(400).json({
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+        success: false,
         message: "Please fill all required fields",
       });
     }
 
-<<<<<<< HEAD
     const costNum = Number(rawCost);
     const qtyNum = Number(quantity);
 
-    if (Number.isNaN(costNum) || costNum <= 0) {
+    if (!Number.isFinite(costNum) || costNum <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Raw cost must be a valid number greater than 0",
+        message:
+          "Raw cost must be a valid number greater than 0",
       });
     }
 
-    if (Number.isNaN(qtyNum) || qtyNum <= 0) {
+    if (
+      !Number.isInteger(qtyNum) ||
+      qtyNum <= 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Quantity must be a valid number greater than 0",
+        message:
+          "Quantity must be a whole number greater than 0",
       });
     }
 
-    // Direct Purchase collection insert bina Product table check kiye
-    const purchase = await Purchase.create({
-      productId: String(productId).trim(),
-      purchaseDate: String(purchaseDate),
-      productName: String(productName).trim(),
-      rawCost: costNum,
-      supplierName: String(supplierName).trim(),
-      quantity: qtyNum,
-      productImage: productImage || "",
-      totalExpense: costNum * qtyNum,
-    });
+    // -------------------------------------------------
+    // FIND PRODUCT
+    // -------------------------------------------------
+    const product = await findProduct(
+      String(productId).trim()
+    );
 
-    return res.status(201).json({
-      success: true,
-=======
-    if (Number(rawCost) <= 0) {
-      return res.status(400).json({
-        message: "Raw cost must be greater than 0",
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Product not found. Please enter a valid Product ID.",
       });
     }
 
-    if (Number(quantity) <= 0) {
-      return res.status(400).json({
-        message: "Quantity must be greater than 0",
-      });
-    }
-
-    // =================================================
-    // CLOUDINARY IMAGE UPLOAD
-    // =================================================
+    // -------------------------------------------------
+    // IMAGE
+    // -------------------------------------------------
     let productImage = "";
 
     if (req.file) {
-      const uploadedImage =
-        await uploadToCloudinary(req.file.buffer);
+      // CloudinaryStorage
+      if (req.file.path) {
+        productImage = req.file.path;
+      }
 
-      productImage = uploadedImage.secure_url;
+      // MemoryStorage / buffer
+      else if (req.file.buffer) {
+        const uploadedImage =
+          await uploadToCloudinary(
+            req.file.buffer
+          );
+
+        productImage =
+          uploadedImage.secure_url;
+      }
     }
 
-    // =================================================
+    // -------------------------------------------------
     // CREATE PURCHASE
-    // =================================================
+    // -------------------------------------------------
     const purchase = await Purchase.create({
-      productId: productId.trim(),
-      purchaseDate,
-      productName: productName.trim(),
-      rawCost: Number(rawCost),
-      supplierName: supplierName.trim(),
-      quantity: Number(quantity),
+      productId: product._id.toString(),
 
-      // Cloudinary URL
+      purchaseDate: String(purchaseDate),
+
+      // Always use actual Product name
+      productName: product.name,
+
+      rawCost: costNum,
+
+      supplierName:
+        String(supplierName).trim(),
+
+      quantity: qtyNum,
+
       productImage,
 
-      totalExpense:
-        Number(rawCost) * Number(quantity),
+      totalExpense: costNum * qtyNum,
     });
 
-    res.status(201).json({
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-      message: "Purchase added successfully",
+    // -------------------------------------------------
+    // UPDATE PRODUCT STOCK
+    // -------------------------------------------------
+    product.stock =
+      Number(product.stock || 0) + qtyNum;
+
+    await product.save();
+
+    // -------------------------------------------------
+    // RESPONSE
+    // -------------------------------------------------
+    return res.status(201).json({
+      success: true,
+      message:
+        "Purchase added and product stock updated successfully",
+
       purchase,
+
+      product: {
+        _id: product._id,
+        name: product.name,
+        stock: product.stock,
+      },
     });
   } catch (error) {
-    console.error("CREATE PURCHASE ERROR:", error);
-<<<<<<< HEAD
+    console.error(
+      "CREATE PURCHASE ERROR:",
+      error
+    );
+
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to create purchase",
-=======
-
-    res.status(500).json({
-      message: "Failed to create purchase",
-      error: error.message,
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+      message:
+        error.message ||
+        "Failed to create purchase",
     });
   }
 };
 
-<<<<<<< HEAD
-// ==========================================
-// UPDATE PURCHASE (SAFE UPDATE - NO CRASH)
-// ==========================================
-=======
 // =====================================================
 // UPDATE PURCHASE
 // =====================================================
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 const updatePurchase = async (req, res) => {
   try {
     const {
@@ -339,175 +350,333 @@ const updatePurchase = async (req, res) => {
       rawCost,
       supplierName,
       quantity,
-<<<<<<< HEAD
-      productImage,
     } = req.body;
 
-    const costNum = Number(rawCost);
-    const qtyNum = Number(quantity);
-
-    if (Number.isNaN(costNum) || costNum <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Raw cost must be greater than 0",
-      });
-    }
-
-    if (Number.isNaN(qtyNum) || qtyNum <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Quantity must be greater than 0",
-      });
-    }
-
-    const updateData = {
-      productId: String(productId).trim(),
-      purchaseDate: String(purchaseDate),
-      productName: String(productName).trim(),
-      rawCost: costNum,
-      supplierName: String(supplierName).trim(),
-      quantity: qtyNum,
-      productImage: productImage || "",
-      totalExpense: costNum * qtyNum,
-    };
-
-    const updatedPurchase = await Purchase.findByIdAndUpdate(
-      req.params.id,
-      { $set: updateData },
-      { new: true, runValidators: false }
-    );
-
-    if (!updatedPurchase) {
-      return res.status(404).json({
-        success: false,
-        message: "Purchase entry not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-=======
-    } = req.body;
-
-    const purchase = await Purchase.findById(
-      req.params.id
-    );
+    // -------------------------------------------------
+    // FIND OLD PURCHASE
+    // -------------------------------------------------
+    const purchase =
+      await Purchase.findById(req.params.id);
 
     if (!purchase) {
       return res.status(404).json({
+        success: false,
         message: "Purchase not found",
       });
     }
 
-    // =================================================
-    // UPDATE BASIC DATA
-    // =================================================
-    purchase.productId = productId?.trim();
-    purchase.purchaseDate = purchaseDate;
-    purchase.productName = productName?.trim();
-    purchase.rawCost = Number(rawCost);
-    purchase.supplierName = supplierName?.trim();
-    purchase.quantity = Number(quantity);
+    const oldProductId =
+      String(purchase.productId);
 
-    purchase.totalExpense =
-      Number(rawCost) * Number(quantity);
+    const oldQuantity =
+      Number(purchase.quantity || 0);
+
+    const newProductId =
+      String(productId || "").trim();
+
+    const newQuantity =
+      Number(quantity);
+
+    const costNum =
+      Number(rawCost);
+
+    // -------------------------------------------------
+    // VALIDATION
+    // -------------------------------------------------
+    if (!newProductId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required",
+      });
+    }
+
+    if (
+      !Number.isFinite(costNum) ||
+      costNum <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Raw cost must be greater than 0",
+      });
+    }
+
+    if (
+      !Number.isInteger(newQuantity) ||
+      newQuantity <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Quantity must be a whole number greater than 0",
+      });
+    }
+
+    // -------------------------------------------------
+    // FIND NEW PRODUCT
+    // -------------------------------------------------
+    const newProduct =
+      await findProduct(newProductId);
+
+    if (!newProduct) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "New Product not found.",
+      });
+    }
 
     // =================================================
-    // NEW IMAGE UPLOADED
+    // CASE 1:
+    // SAME PRODUCT
     // =================================================
+    if (
+      oldProductId ===
+      newProduct._id.toString()
+    ) {
+      const difference =
+        newQuantity - oldQuantity;
+
+      const currentStock =
+        Number(newProduct.stock || 0);
+
+      const newStock =
+        currentStock + difference;
+
+      // Prevent negative stock
+      if (newStock < 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Cannot update purchase because product stock would become negative.",
+        });
+      }
+
+      newProduct.stock = newStock;
+
+      await newProduct.save();
+    }
+
+    // =================================================
+    // CASE 2:
+    // PRODUCT CHANGED
+    // =================================================
+    else {
+      // -----------------------------------------------
+      // FIND OLD PRODUCT
+      // -----------------------------------------------
+      const oldProduct =
+        await Product.findById(
+          oldProductId
+        );
+
+      if (oldProduct) {
+        const oldStock =
+          Number(oldProduct.stock || 0);
+
+        const restoredStock =
+          oldStock - oldQuantity;
+
+        if (restoredStock < 0) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Cannot change product because old product stock would become negative.",
+          });
+        }
+
+        oldProduct.stock =
+          restoredStock;
+
+        await oldProduct.save();
+      }
+
+      // -----------------------------------------------
+      // ADD NEW QUANTITY TO NEW PRODUCT
+      // -----------------------------------------------
+      newProduct.stock =
+        Number(newProduct.stock || 0) +
+        newQuantity;
+
+      await newProduct.save();
+    }
+
+    // -------------------------------------------------
+    // UPDATE IMAGE
+    // -------------------------------------------------
     if (req.file) {
-      const oldImage = purchase.productImage;
+      const oldImage =
+        purchase.productImage;
 
-      const uploadedImage =
-        await uploadToCloudinary(req.file.buffer);
+      let newImage = "";
 
-      purchase.productImage =
-        uploadedImage.secure_url;
+      if (req.file.path) {
+        newImage = req.file.path;
+      } else if (req.file.buffer) {
+        const uploadedImage =
+          await uploadToCloudinary(
+            req.file.buffer
+          );
 
-      // Delete old Cloudinary image
+        newImage =
+          uploadedImage.secure_url;
+      }
+
+      if (newImage) {
+        purchase.productImage =
+          newImage;
+      }
+
       if (oldImage) {
-        await deleteFromCloudinary(oldImage);
+        await deleteFromCloudinary(
+          oldImage
+        );
       }
     }
+
+    // -------------------------------------------------
+    // UPDATE PURCHASE DATA
+    // -------------------------------------------------
+    purchase.productId =
+      newProduct._id.toString();
+
+    purchase.purchaseDate =
+      String(purchaseDate);
+
+    purchase.productName =
+      newProduct.name;
+
+    purchase.rawCost =
+      costNum;
+
+    purchase.supplierName =
+      String(supplierName).trim();
+
+    purchase.quantity =
+      newQuantity;
+
+    purchase.totalExpense =
+      costNum * newQuantity;
 
     const updatedPurchase =
       await purchase.save();
 
-    res.status(200).json({
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-      message: "Purchase updated successfully",
+    // -------------------------------------------------
+    // RESPONSE
+    // -------------------------------------------------
+    return res.status(200).json({
+      success: true,
+
+      message:
+        "Purchase updated and product stock adjusted successfully",
+
       purchase: updatedPurchase,
+
+      product: {
+        _id: newProduct._id,
+        name: newProduct.name,
+        stock: newProduct.stock,
+      },
     });
   } catch (error) {
-<<<<<<< HEAD
-    console.error("UPDATE PURCHASE ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to update purchase",
-=======
     console.error(
       "UPDATE PURCHASE ERROR:",
       error
     );
 
-    res.status(500).json({
-      message: "Failed to update purchase",
-      error: error.message,
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Failed to update purchase",
     });
   }
 };
 
-<<<<<<< HEAD
-// ==========================================
-// DELETE PURCHASE
-// ==========================================
-const deletePurchase = async (req, res) => {
-  try {
-    const purchase = await Purchase.findByIdAndDelete(req.params.id);
-
-    if (!purchase) {
-      return res.status(404).json({
-        success: false,
-        message: "Purchase entry not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Purchase deleted successfully",
-    });
-  } catch (error) {
-    console.error("DELETE PURCHASE ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to delete purchase",
-=======
 // =====================================================
 // DELETE PURCHASE
 // =====================================================
 const deletePurchase = async (req, res) => {
   try {
     const purchase =
-      await Purchase.findByIdAndDelete(
+      await Purchase.findById(
         req.params.id
       );
 
     if (!purchase) {
       return res.status(404).json({
-        message: "Purchase not found",
+        success: false,
+        message:
+          "Purchase entry not found",
       });
     }
 
-    // Delete Cloudinary image
+    // -------------------------------------------------
+    // FIND PRODUCT
+    // -------------------------------------------------
+    const product =
+      await Product.findById(
+        purchase.productId
+      );
+
+    // -------------------------------------------------
+    // REMOVE PURCHASE QUANTITY FROM STOCK
+    // -------------------------------------------------
+    if (product) {
+      const currentStock =
+        Number(product.stock || 0);
+
+      const purchaseQuantity =
+        Number(purchase.quantity || 0);
+
+      const newStock =
+        currentStock -
+        purchaseQuantity;
+
+      // Prevent negative stock
+      if (newStock < 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Purchase cannot be deleted because product stock is already lower than this purchase quantity.",
+        });
+      }
+
+      product.stock =
+        newStock;
+
+      await product.save();
+    }
+
+    // -------------------------------------------------
+    // DELETE PURCHASE IMAGE
+    // -------------------------------------------------
     if (purchase.productImage) {
       await deleteFromCloudinary(
         purchase.productImage
       );
     }
 
-    res.status(200).json({
-      message: "Purchase deleted successfully",
+    // -------------------------------------------------
+    // DELETE PURCHASE
+    // -------------------------------------------------
+    await Purchase.findByIdAndDelete(
+      purchase._id
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      message:
+        "Purchase deleted and product stock adjusted successfully",
+
+      product: product
+        ? {
+            _id: product._id,
+            name: product.name,
+            stock: product.stock,
+          }
+        : null,
     });
   } catch (error) {
     console.error(
@@ -515,14 +684,18 @@ const deletePurchase = async (req, res) => {
       error
     );
 
-    res.status(500).json({
-      message: "Failed to delete purchase",
-      error: error.message,
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Failed to delete purchase",
     });
   }
 };
 
+// =====================================================
+// EXPORT
+// =====================================================
 module.exports = {
   getPurchases,
   getPurchaseById,

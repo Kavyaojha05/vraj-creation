@@ -1,10 +1,5 @@
 const express = require("express");
 
-<<<<<<< HEAD
-=======
-const router = express.Router();
-
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 const {
   getPurchases,
   getPurchaseById,
@@ -13,41 +8,29 @@ const {
   deletePurchase,
 } = require("../controllers/purchaseController");
 
-<<<<<<< HEAD
-const router = express.Router();
-
-// GET all
-router.get("/", getPurchases);
-
-// GET single
-router.get("/:id", getPurchaseById);
-
-// POST
-router.post("/", createPurchase);
-
-// PUT
-router.put("/:id", updatePurchase);
-
-// DELETE
-=======
 const upload = require("../middleware/upload");
+const protect = require("../middleware/authMiddleware");
+
+const router = express.Router();
 
 // =====================================================
 // GET ALL PURCHASES
 // =====================================================
-router.get("/", getPurchases);
+router.get("/", protect, getPurchases);
 
 // =====================================================
 // GET SINGLE PURCHASE
 // =====================================================
-router.get("/:id", getPurchaseById);
+router.get("/:id", protect, getPurchaseById);
 
 // =====================================================
 // CREATE PURCHASE
 // Image field name = imageFile
+// Product stock will increase automatically
 // =====================================================
 router.post(
   "/",
+  protect,
   upload.single("imageFile"),
   createPurchase
 );
@@ -55,17 +38,23 @@ router.post(
 // =====================================================
 // UPDATE PURCHASE
 // Image field name = imageFile
+// Product stock will be adjusted automatically
 // =====================================================
 router.put(
   "/:id",
+  protect,
   upload.single("imageFile"),
   updatePurchase
 );
 
 // =====================================================
 // DELETE PURCHASE
+// Product stock will decrease automatically
 // =====================================================
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-router.delete("/:id", deletePurchase);
+router.delete(
+  "/:id",
+  protect,
+  deletePurchase
+);
 
 module.exports = router;

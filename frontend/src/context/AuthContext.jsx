@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -20,6 +21,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       const savedUser = localStorage.getItem("user");
 
+      // No token = not logged in
       if (!token) {
         setUser(null);
         setLoading(false);
@@ -28,60 +30,40 @@ export const AuthProvider = ({ children }) => {
 
       let parsedUser = null;
 
-      if (savedUser) {
-       <<<<<<< HEAD
-      if (savedUser) {
-        try {
-          parsedUser = JSON.parse(savedUser);
-=======
       // Restore user immediately from localStorage
       if (savedUser) {
         try {
           parsedUser = JSON.parse(savedUser);
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
           if (parsedUser) {
             setUser(parsedUser);
           }
         } catch (error) {
-          console.error("Local storage user parse error:", error);
+          console.error(
+            "Local storage user parse error:",
+            error
+          );
+
+          localStorage.removeItem("user");
         }
       }
 
-<<<<<<< HEAD
-=======
       // =================================================
       // SYNC USER WITH BACKEND
       // =================================================
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       try {
         const response = await api.get("/auth/profile");
 
         if (response?.data) {
           const profileUser = response.data;
-<<<<<<< HEAD
-=======
 
-          // IMPORTANT:
-          // Keep saved user information such as name
-          // if backend profile doesn't return it.
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+          // Merge localStorage user + backend profile
           const updatedUser = {
             ...(parsedUser || {}),
             ...(profileUser || {}),
           };
 
-<<<<<<< HEAD
-          if (!profileUser.name && parsedUser?.name) {
-            updatedUser.name = parsedUser.name;
-          }
-          if (!profileUser.username && parsedUser?.username) {
-            updatedUser.username = parsedUser.username;
-          }
-          if (!profileUser.email && parsedUser?.email) {
-=======
-          // If backend doesn't return name,
-          // keep the name from localStorage.
+          // Keep saved name if backend doesn't return it
           if (
             !profileUser.name &&
             parsedUser?.name
@@ -89,7 +71,7 @@ export const AuthProvider = ({ children }) => {
             updatedUser.name = parsedUser.name;
           }
 
-          // Same for username
+          // Keep saved username if backend doesn't return it
           if (
             !profileUser.username &&
             parsedUser?.username
@@ -97,33 +79,28 @@ export const AuthProvider = ({ children }) => {
             updatedUser.username = parsedUser.username;
           }
 
-          // Same for email
+          // Keep saved email if backend doesn't return it
           if (
             !profileUser.email &&
             parsedUser?.email
           ) {
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
             updatedUser.email = parsedUser.email;
           }
 
           setUser(updatedUser);
-<<<<<<< HEAD
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-=======
 
           localStorage.setItem(
             "user",
             JSON.stringify(updatedUser)
           );
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
         }
       } catch (error) {
-        console.error("Profile sync failed:", error);
+        console.error(
+          "Profile sync failed:",
+          error
+        );
 
-<<<<<<< HEAD
-=======
         // Token expired / invalid
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
         if (error?.response?.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
@@ -138,60 +115,44 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // =====================================================
-<<<<<<< HEAD
-  // REGISTER (FIXED: NO AUTO-LOGIN, PENDING APPROVAL ONLY)
-=======
   // REGISTER
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   // =====================================================
-  const register = async (name, email, password) => {
+  // New user should NOT be automatically logged in.
+  // Admin approval is required first.
+  // =====================================================
+  const register = async (
+    name,
+    email,
+    password
+  ) => {
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/register", {
-        name: name.trim(),
-        email: email.trim(),
-        password,
-      });
+      const response = await api.post(
+        "/auth/register",
+        {
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        }
+      );
 
       const data = response?.data || {};
 
-<<<<<<< HEAD
-      // NOTE: Naye user ko register hone par token aur login state nahi deni hai,
-      // kyunki uska account 'pending' state me hai aur admin approval zaroori hai.
-=======
-      const token =
-        data.token ||
-        data.accessToken ||
-        data.data?.token;
-
-      const loggedInUser =
-        data.user ||
-        data.data?.user;
-
-      if (token && loggedInUser) {
-        localStorage.setItem("token", token);
-        localStorage.setItem(
-          "user",
-          JSON.stringify(loggedInUser)
-        );
-
-        setUser(loggedInUser);
-      }
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+      // Do NOT save token or login user after registration.
+      // User must wait for admin approval.
 
       return {
         success: true,
         message:
           data.message ||
-<<<<<<< HEAD
           "Registration successful! Admin approval ke baad aap login kar sakenge.",
-=======
-          "Registration successful.",
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       };
     } catch (error) {
-      console.error("REGISTER ERROR:", error);
+      console.error(
+        "REGISTER ERROR:",
+        error
+      );
 
       return {
         success: false,
@@ -208,14 +169,20 @@ export const AuthProvider = ({ children }) => {
   // =====================================================
   // LOGIN
   // =====================================================
-  const login = async (email, password) => {
+  const login = async (
+    email,
+    password
+  ) => {
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/login", {
-        email: email.trim(),
-        password,
-      });
+      const response = await api.post(
+        "/auth/login",
+        {
+          email: email.trim(),
+          password,
+        }
+      );
 
       const data = response?.data || {};
 
@@ -228,6 +195,7 @@ export const AuthProvider = ({ children }) => {
         data.user ||
         data.data?.user;
 
+      // Token missing
       if (!token) {
         return {
           success: false,
@@ -238,6 +206,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      // User missing
       if (!loggedInUser) {
         return {
           success: false,
@@ -246,12 +215,11 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-<<<<<<< HEAD
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(loggedInUser));
-=======
       // Save token
-      localStorage.setItem("token", token);
+      localStorage.setItem(
+        "token",
+        token
+      );
 
       // Save complete user
       localStorage.setItem(
@@ -260,23 +228,21 @@ export const AuthProvider = ({ children }) => {
       );
 
       // Update state
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       setUser(loggedInUser);
 
       return {
         success: true,
         user: loggedInUser,
         token,
-<<<<<<< HEAD
-        message: data.message || "Login successful.",
-=======
         message:
           data.message ||
           "Login successful.",
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
       };
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
+      console.error(
+        "LOGIN ERROR:",
+        error
+      );
 
       return {
         success: false,
@@ -296,11 +262,15 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-<<<<<<< HEAD
-=======
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-er,
+    setUser(null);
+  };
+
+  // =====================================================
+  // CONTEXT VALUE
+  // =====================================================
+  const value = {
+    user,
     loading,
     login,
     register,

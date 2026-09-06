@@ -1,10 +1,7 @@
+
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-<<<<<<< HEAD
 import logoImg from "../assets/logo2.jpeg";
-=======
-import logoImg from "../assets/logo2.jpeg"; 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -36,14 +33,11 @@ const Sidebar = () => {
       path: "/invoices",
       icon: "🧾",
     },
-<<<<<<< HEAD
     {
       name: "User Approvals",
       path: "/admin/approvals",
       icon: "🛡️",
     },
-=======
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
   ];
 
   const handleLogout = () => {
@@ -52,22 +46,25 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-slate-100 flex flex-col justify-between p-4 shadow-xl border-r border-slate-800 shrink-0 sticky top-0">
-      
-      {/* Upper Section: Logo & Navigation */}
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col justify-between border-r border-slate-800 bg-slate-900 p-4 text-slate-100 shadow-xl">
+      {/* =================================================
+          UPPER SECTION
+      ================================================= */}
       <div>
         {/* Logo Section */}
-        <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-slate-800">
+        <div className="mb-6 flex items-center gap-3 border-b border-slate-800 px-3 py-4">
           <img
             src={logoImg}
             alt="Vraj Creation Logo"
-            className="w-10 h-10 object-cover rounded-lg bg-slate-800 border border-slate-700"
+            className="h-10 w-10 rounded-lg border border-slate-700 bg-slate-800 object-cover"
           />
+
           <div>
-            <h2 className="font-bold text-lg leading-tight tracking-wide text-white">
+            <h2 className="text-lg font-bold leading-tight tracking-wide text-white">
               Vraj Creation
             </h2>
-            <span className="text-xs text-indigo-400 font-medium">
+
+            <span className="text-xs font-medium text-indigo-400">
               Admin Panel
             </span>
           </div>
@@ -80,32 +77,41 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 }`
               }
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className="text-lg">
+                {item.icon}
+              </span>
+
               <span>{item.name}</span>
             </NavLink>
           ))}
         </nav>
       </div>
 
-      {/* Bottom Section: User Info & Logout */}
-      <div className="border-t border-slate-800 pt-4 flex flex-col gap-3">
+      {/* =================================================
+          BOTTOM SECTION
+      ================================================= */}
+      <div className="flex flex-col gap-3 border-t border-slate-800 pt-4">
         {/* User Card */}
-        <div className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-800">
-          <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center border border-indigo-500/30 text-sm">
-            {user?.name ? user.name.charAt(0).toUpperCase() : "A"}
+        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-800/50 px-3 py-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-500/20 text-sm font-bold text-indigo-400">
+            {user?.name
+              ? user.name.charAt(0).toUpperCase()
+              : "A"}
           </div>
+
           <div className="overflow-hidden">
-            <strong className="block text-sm font-semibold text-slate-200 truncate">
+            <strong className="block truncate text-sm font-semibold text-slate-200">
               {user?.name || "Admin"}
             </strong>
-            <small className="block text-xs text-slate-400 capitalize truncate">
+
+            <small className="block truncate text-xs capitalize text-slate-400">
               {user?.role || "admin"}
             </small>
           </div>
@@ -113,17 +119,14 @@ const Sidebar = () => {
 
         {/* Logout Button */}
         <button
-<<<<<<< HEAD
           type="button"
-=======
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-600 hover:text-white font-medium text-sm transition-all duration-200"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 transition-all duration-200 hover:bg-red-600 hover:text-white"
         >
-          <span>🚪</span> Logout
+          <span>🚪</span>
+          Logout
         </button>
       </div>
-
     </aside>
   );
 };

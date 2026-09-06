@@ -4,93 +4,98 @@ const saleSchema = new mongoose.Schema(
   {
     productId: {
       type: String,
-<<<<<<< HEAD
-      default: "",
-    },
-    productName: {
-      type: String,
-      default: "",
-    },
-=======
       required: true,
       trim: true,
     },
 
+    productName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    productImage: {
+      type: String,
+      default: "",
+    },
+
+    // Sale platform
+    platform: {
+      type: String,
+      default: "meesho",
+      trim: true,
+      lowercase: true,
+    },
+
+    // Sale date
     saleDate: {
       type: String,
-      required: true,
+      default: "",
     },
 
-    productName: {
+    // Kept for compatibility with existing frontend
+    date: {
       type: String,
-      required: true,
-      trim: true,
-    },
-
-    sellingPrice: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    customerName: {
-      type: String,
-      required: true,
-      trim: true,
+      default: "",
     },
 
     quantity: {
       type: Number,
       required: true,
       min: 1,
-    },
-
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
-    productImage: {
-      type: String,
-      default: "",
-    },
-<<<<<<< HEAD
-    platform: {
-      type: String,
-      default: "meesho",
-    },
-    date: {
-      type: String,
-      default: "",
-    },
-    quantity: {
-      type: Number,
       default: 1,
     },
+
+    // Amount received/settled by marketplace
     bankSettlementAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
+
+    // Optional sale-related costs
     packagingCost: {
       type: Number,
       default: 0,
+      min: 0,
     },
-    colouringCost: {
-=======
 
-    totalAmount: {
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
+    colouringCost: {
       type: Number,
       default: 0,
+      min: 0,
+    },
+
+    // Selling price per item
+    sellingPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Kept for compatibility with alternate sales flow
+    customerName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Automatically calculated total
+    totalAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {
     timestamps: true,
-<<<<<<< HEAD
-    strict: false, // Strict false se extra fields aane par bhi error throw nahi karega
+    strict: false,
   }
 );
 
-=======
-  }
-);
-
+// =====================================================
+// CALCULATE TOTAL AMOUNT BEFORE SAVE
+// =====================================================
 saleSchema.pre("save", function (next) {
   this.totalAmount =
     Number(this.sellingPrice || 0) *
@@ -99,24 +104,31 @@ saleSchema.pre("save", function (next) {
   next();
 });
 
+// =====================================================
+// CALCULATE TOTAL AMOUNT BEFORE UPDATE
+// =====================================================
 saleSchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate();
 
-  if (
-    update.sellingPrice !== undefined ||
+  const sellingPrice =
+    update.sellingPrice !== undefined
+      ? Number(update.sellingPrice || 0)
+      : undefined;
+
+  const quantity =
     update.quantity !== undefined
-  ) {
-    const sellingPrice =
-      Number(update.sellingPrice || 0);
+      ? Number(update.quantity || 0)
+      : undefined;
 
-    const quantity =
-      Number(update.quantity || 0);
+  if (sellingPrice !== undefined || quantity !== undefined) {
+    const currentTotal =
+      Number(sellingPrice ?? 0) *
+      Number(quantity ?? 0);
 
-    update.totalAmount = sellingPrice * quantity;
+    update.totalAmount = currentTotal;
   }
 
   next();
 });
 
->>>>>>> fb2cf8dca7ee4ab04f0384f3cb31d6661a8fa4a7
 module.exports = mongoose.model("Sale", saleSchema);

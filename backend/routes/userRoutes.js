@@ -1,12 +1,22 @@
 const express = require("express");
-const router = express.Router();
+
 const {
   getPendingUsers,
   approveUser,
 } = require("../controllers/authController");
 
-// Routes
-router.get("/pending", getPendingUsers);
-router.put("/approve/:id", approveUser);
+const protect = require("../middleware/authMiddleware");
 
-module.exports = router; // <-- Yahan 'module.exports' hona zaroori hai (model.exports nahi)
+const router = express.Router();
+
+// =====================================================
+// ADMIN USER APPROVAL ROUTES
+// =====================================================
+
+// Get all pending users
+router.get("/pending", protect, getPendingUsers);
+
+// Approve pending user
+router.put("/approve/:id", protect, approveUser);
+
+module.exports = router;
