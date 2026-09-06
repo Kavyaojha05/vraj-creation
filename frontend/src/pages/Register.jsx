@@ -161,7 +161,7 @@ const Register = () => {
                 id="name"
                 type="text"
                 required
-                placeholder="Pawan Kumar"
+                placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={loading}
