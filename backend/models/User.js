@@ -54,6 +54,18 @@ const userSchema = new mongoose.Schema(
       enum: ["pending", "active", "rejected"],
       default: "pending",
     },
+
+    // =====================================================
+    // PASSWORD RESET FIELDS (NEW)
+    // =====================================================
+
+    resetPasswordToken: {
+      type: String,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

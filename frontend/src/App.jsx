@@ -6,6 +6,8 @@ import {
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import AddProduct from "./pages/AddProduct";
@@ -99,6 +101,30 @@ const AppRoutes = () => {
             <Navigate to="/dashboard" replace />
           ) : (
             <Register />
+          )
+        }
+      />
+
+      {/* FORGOT PASSWORD */}
+      <Route
+        path="/forgot-password"
+        element={
+          user ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <ForgotPassword />
+          )
+        }
+      />
+
+      {/* RESET PASSWORD */}
+      <Route
+        path="/reset-password/:token"
+        element={
+          user ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <ResetPassword />
           )
         }
       />

@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 // =====================================================
 // CONFIG
@@ -20,6 +22,18 @@ const ADMIN_EMAILS = [
   "ojhavikas30@gmail.com",
   "kavyaojha05@gmail.com",
 ];
+
+// =====================================================
+// EMAIL CONFIG (NODEMAILER)
+// =====================================================
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // =====================================================
 // EMAIL VALIDATION
@@ -306,8 +320,6 @@ const login = async (req, res) => {
     // ===================================================
     // ADMIN EMAIL AUTO-ACTIVATION
     // ===================================================
-    // Agar email ADMIN_EMAILS mein hai,
-    // to automatically admin + active bana do.
 
     const adminEmail =
       isAdminEmail(cleanEmail);
@@ -329,10 +341,6 @@ const login = async (req, res) => {
     // ===================================================
 
     if (user.status !== "active") {
-      // -------------------------------------------------
-      // PENDING
-      // -------------------------------------------------
-
       if (user.status === "pending") {
         return res.status(403).json({
           success: false,
@@ -341,10 +349,6 @@ const login = async (req, res) => {
         });
       }
 
-      // -------------------------------------------------
-      // REJECTED
-      // -------------------------------------------------
-
       if (user.status === "rejected") {
         return res.status(403).json({
           success: false,
@@ -352,10 +356,6 @@ const login = async (req, res) => {
             "Aapka account reject kar diya gaya hai.",
         });
       }
-
-      // -------------------------------------------------
-      // OTHER STATUS
-      // -------------------------------------------------
 
       return res.status(403).json({
         success: false,
@@ -417,10 +417,6 @@ const getProfile = async (req, res) => {
       req.user?.id ||
       req.user?._id;
 
-    // ===================================================
-    // AUTH CHECK
-    // ===================================================
-
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -428,10 +424,6 @@ const getProfile = async (req, res) => {
           "User authentication information missing",
       });
     }
-
-    // ===================================================
-    // FIND USER
-    // ===================================================
 
     const user =
       await User.findById(userId)
@@ -447,10 +439,6 @@ const getProfile = async (req, res) => {
           "User profile not found",
       });
     }
-
-    // ===================================================
-    // RESPONSE
-    // ===================================================
 
     return res.status(200).json({
       success: true,
@@ -479,10 +467,6 @@ const getPendingUsers = async (
   res
 ) => {
   try {
-    // ===================================================
-    // ADMIN CHECK
-    // ===================================================
-
     if (
       req.user?.role !== "admin"
     ) {
@@ -492,10 +476,6 @@ const getPendingUsers = async (
           "Admin access required",
       });
     }
-
-    // ===================================================
-    // GET PENDING USERS
-    // ===================================================
 
     const pendingUsers =
       await User.find({
@@ -508,10 +488,6 @@ const getPendingUsers = async (
           createdAt: -1,
         })
         .lean();
-
-    // ===================================================
-    // RESPONSE
-    // ===================================================
 
     return res.status(200).json({
       success: true,
@@ -542,10 +518,6 @@ const approveUser = async (
   res
 ) => {
   try {
-    // ===================================================
-    // ADMIN CHECK
-    // ===================================================
-
     if (
       req.user?.role !== "admin"
     ) {
@@ -556,10 +528,6 @@ const approveUser = async (
       });
     }
 
-    // ===================================================
-    // GET USER ID
-    // ===================================================
-
     const { id } = req.params;
 
     if (!id) {
@@ -569,10 +537,6 @@ const approveUser = async (
           "User ID is required",
       });
     }
-
-    // ===================================================
-    // APPROVE USER
-    // ===================================================
 
     const user =
       await User.findByIdAndUpdate(
@@ -588,10 +552,6 @@ const approveUser = async (
         "name email status role"
       );
 
-    // ===================================================
-    // USER NOT FOUND
-    // ===================================================
-
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -600,16 +560,10 @@ const approveUser = async (
       });
     }
 
-    // ===================================================
-    // RESPONSE
-    // ===================================================
-
     return res.status(200).json({
       success: true,
-
       message:
         `User ${user.name} approved successfully!`,
-
       user,
     });
   } catch (error) {
@@ -628,6 +582,109 @@ const approveUser = async (
 };
 
 // =====================================================
+// FORGOT PASSWORD
+// =====================================================
+
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists with this email, a password reset link has been sent.",
+      });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 Minutes
+    await user.save();
+
+    const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${token}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Password Reset Request - Vraj Creation",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #8f3424;">Vraj Creation Security</h2>
+          <p>Hello <b>${user.name}</b>,</p>
+          <p>You requested a password reset. Click the button below to set a new password. This link is valid for 15 minutes:</p>
+          <a href="${resetLink}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #8f3424; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">Reset Password</a>
+          <p style="margin-top: 20px; font-size: 12px; color: #777;">If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({
+      success: true,
+      message: "If an account exists with this email, a password reset link has been sent.",
+    });
+  } catch (error) {
+    console.error("FORGOT PASSWORD ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error. Please try again later.",
+    });
+  }
+};
+
+// =====================================================
+// RESET PASSWORD
+// =====================================================
+
+const resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+
+  try {
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Password reset link is invalid or has expired.",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password has been successfully reset. You can now log in.",
+    });
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error. Please try again later.",
+    });
+  }
+};
+
+// =====================================================
 // EXPORT
 // =====================================================
 
@@ -637,4 +694,6 @@ module.exports = {
   getProfile,
   getPendingUsers,
   approveUser,
+  forgotPassword,
+  resetPassword,
 };

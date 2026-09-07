@@ -102,7 +102,7 @@ app.use(
 // API ROUTES
 // =====================================================
 
-// Authentication
+// Authentication (Includes Login, Register, Forgot & Reset Password)
 app.use(
   "/api/auth",
   authRoutes

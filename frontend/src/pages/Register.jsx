@@ -48,8 +48,14 @@ const Register = () => {
       return;
     }
 
-    if (cleanPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    // ==============================
+    // PASSWORD FORMAT VALIDATION
+    // ==============================
+    // कम से कम 8 अक्षर, 1 बड़ा अक्षर, 1 छोटा अक्षर, 1 नंबर और 1 स्पेशल कैरेक्टर
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!passwordRegex.test(cleanPassword)) {
+      setError("Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&).");
       return;
     }
 
@@ -208,7 +214,7 @@ const Register = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   required
-                  placeholder="Minimum 6 characters"
+                  placeholder="Min 8 chars, Upper, Lower, Number & Symbol"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
@@ -227,6 +233,9 @@ const Register = () => {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Must contain 8+ chars, uppercase, lowercase, number & symbol.
+              </p>
             </div>
 
             {/* CONFIRM PASSWORD */}
