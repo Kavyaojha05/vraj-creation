@@ -41,17 +41,17 @@ const Register = () => {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // मजबूत ईमेल वैलिडेशन (Backend से मैच करता हुआ)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if (!emailRegex.test(cleanEmail)) {
-      setError("Please enter a valid email address.");
+      setError("Please enter a valid and proper email address (e.g., name@gmail.com).");
       return;
     }
 
     // ==============================
     // PASSWORD FORMAT VALIDATION
     // ==============================
-    // कम से कम 8 अक्षर, 1 बड़ा अक्षर, 1 छोटा अक्षर, 1 नंबर और 1 स्पेशल कैरेक्टर
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
     if (!passwordRegex.test(cleanPassword)) {

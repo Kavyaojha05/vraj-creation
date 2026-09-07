@@ -18,7 +18,7 @@ const JWT_SECRET =
 // In emails ko automatically admin access milega.
 
 const ADMIN_EMAILS = [
-  "pawan@gmail.com",
+  "pawanpatelcollege@gmail.com",
   "ojhavikas30@gmail.com",
   "kavyaojha05@gmail.com",
 ];
@@ -36,11 +36,11 @@ const transporter = nodemailer.createTransport({
 });
 
 // =====================================================
-// EMAIL VALIDATION
+// EMAIL VALIDATION (मजबूत चेक)
 // =====================================================
 
 const EMAIL_REGEX =
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // =====================================================
 // ADMIN CHECK HELPER
@@ -345,7 +345,7 @@ const login = async (req, res) => {
         return res.status(403).json({
           success: false,
           message:
-            "Aapka account abhi Admin dwara approve nahi hua hai. Kripya permission ka intezaar karein.",
+            "Aapka account abhi Admin dwara approve nahi hua hai. Kripya permission ka intezaار karein.",
         });
       }
 
