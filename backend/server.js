@@ -18,6 +18,9 @@ const userRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const saleRoutes = require("./routes/saleRoutes");
+const billRoutes = require("./routes/billRoutes");
+
+
 
 const app = express();
 
@@ -113,6 +116,7 @@ app.use(
   "/api/users",
   userRoutes
 );
+app.use("/api/bills", billRoutes);
 
 // Products
 app.use(

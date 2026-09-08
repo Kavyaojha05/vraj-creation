@@ -15,18 +15,24 @@ const router = express.Router();
 
 // =====================================================
 // GET ALL PURCHASES
+// GET /api/purchases
 // =====================================================
 router.get("/", protect, getPurchases);
 
 // =====================================================
 // GET SINGLE PURCHASE
+// GET /api/purchases/:id
 // =====================================================
 router.get("/:id", protect, getPurchaseById);
 
 // =====================================================
 // CREATE PURCHASE
-// Image field name = imageFile
-// Product stock will increase automatically
+// POST /api/purchases
+//
+// FormData:
+// imageFile -> image
+//
+// Product stock will increase automatically.
 // =====================================================
 router.post(
   "/",
@@ -37,8 +43,15 @@ router.post(
 
 // =====================================================
 // UPDATE PURCHASE
-// Image field name = imageFile
-// Product stock will be adjusted automatically
+// PUT /api/purchases/:id
+//
+// FormData:
+// imageFile -> optional new image
+//
+// If imageFile is not provided,
+// existing image will remain unchanged.
+//
+// Product stock will be adjusted automatically.
 // =====================================================
 router.put(
   "/:id",
@@ -49,7 +62,9 @@ router.put(
 
 // =====================================================
 // DELETE PURCHASE
-// Product stock will decrease automatically
+// DELETE /api/purchases/:id
+//
+// Product stock will decrease automatically.
 // =====================================================
 router.delete(
   "/:id",

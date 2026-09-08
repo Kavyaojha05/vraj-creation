@@ -42,10 +42,14 @@ const protect = (req, res, next) => {
     const decoded = jwt.verify(token, secret);
 
     // =====================================================
-    // SAVE USER DATA
+    // SAVE USER DATA (यहाँ _id और id दोनों असाइन किए गए हैं)
     // =====================================================
 
-    req.user = decoded;
+    req.user = {
+      _id: decoded.id,
+      id: decoded.id,
+      role: decoded.role,
+    };
 
     next();
   } catch (error) {

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -30,9 +29,9 @@ const AdminLayout = ({ children }) => {
   }, [darkMode]);
 
   // =====================================================
-  // MENU ITEMS
+  // MENU ITEMS (यहाँ Generate Bill जोड़ दिया गया है)
   // =====================================================
-  const menuItems = [
+ const menuItems = [
     {
       name: "Dashboard",
       path: "/dashboard",
@@ -47,6 +46,16 @@ const AdminLayout = ({ children }) => {
       name: "Add Product",
       path: "/products/add",
       icon: "➕",
+    },
+    {
+      name: "Generate Bill",
+      path: "/create-bill",
+      icon: "📄",
+    },
+    {
+      name: "Invoices & Bills",
+      path: "/invoices",
+      icon: "🧾",
     },
     {
       name: "Sales",

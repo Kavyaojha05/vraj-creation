@@ -16,6 +16,9 @@ import ProductView from "./pages/ProductView";
 import SalesPage from "./pages/SalesPage";
 import PurchasesPage from "./pages/PurchasesPage";
 import AdminApprovals from "./pages/AdminApprovals";
+import CreateBill from "./pages/CreateBill";
+import BillsList from "./pages/BillsList";
+import EditBill from "./pages/EditBill";
 
 import AdminLayout from "./components/AdminLayout";
 import {
@@ -139,6 +142,26 @@ const AppRoutes = () => {
         }
       />
 
+      {/* CREATE BILL (अब AdminPage के अंदर है ताकि साइडबार और हेडर दिखे) */}
+      <Route
+        path="/create-bill"
+        element={
+          <AdminPage>
+            <CreateBill />
+          </AdminPage>
+        }
+      />
+
+      {/* INVOICES / BILLS LIST (पाथ /invoices सेट किया गया है ताकि साइडबार से मैच हो) */}
+      <Route
+        path="/invoices"
+        element={
+          <AdminPage>
+            <BillsList />
+          </AdminPage>
+        }
+      />
+
       {/* PRODUCTS */}
       <Route
         path="/products"
@@ -208,6 +231,10 @@ const AppRoutes = () => {
           </AdminPage>
         }
       />
+      <Route
+  path="/edit-bill/:id"
+  element={<EditBill />}
+/>
 
       {/* HOME */}
       <Route

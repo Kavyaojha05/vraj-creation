@@ -1,4 +1,3 @@
-
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logoImg from "../assets/logo2.jpeg";
@@ -22,6 +21,11 @@ const Sidebar = () => {
       name: "Add Product",
       path: "/products/add",
       icon: "➕",
+    },
+    {
+      name: "Generate Bill",
+      path: "/create-bill",
+      icon: "📄",
     },
     {
       name: "Payments & Orders",
