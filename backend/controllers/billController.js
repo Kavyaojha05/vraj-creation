@@ -1,6 +1,59 @@
 const Bill = require("../models/Bill");
 
 // =====================================================
+// GET NEXT UNIQUE BILL NUMBER
+// =====================================================
+const getNextBillNumber = async () => {
+  const year = new Date().getFullYear();
+  const prefix = `VRAJ-${year}-`;
+
+  // Current year ke bills find karo
+  const bills = await Bill.find({
+    billNumber: {
+      $regex: `^${prefix}`,
+    },
+  })
+    .select("billNumber")
+    .lean();
+
+  let maxNumber = 0;
+
+  for (const bill of bills) {
+    const match = String(bill.billNumber || "").match(
+      new RegExp(`^VRAJ-${year}-(\\d+)$`)
+    );
+
+    if (match) {
+      const number = Number(match[1]);
+
+      if (Number.isFinite(number) && number > maxNumber) {
+        maxNumber = number;
+      }
+    }
+  }
+
+  let nextNumber = maxNumber + 1;
+
+  // Extra safety check
+  while (true) {
+    const billNumber = `${prefix}${String(nextNumber).padStart(
+      3,
+      "0"
+    )}`;
+
+    const exists = await Bill.exists({
+      billNumber,
+    });
+
+    if (!exists) {
+      return billNumber;
+    }
+
+    nextNumber++;
+  }
+};
+
+// =====================================================
 // GENERATE BILL
 // =====================================================
 const generateBill = async (req, res) => {
@@ -118,7 +171,8 @@ const generateBill = async (req, res) => {
     // =====================================================
     // PLACE OF SUPPLY
     // =====================================================
-    let finalPlaceOfSupply = placeOfSupply || "";
+    let finalPlaceOfSupply =
+      placeOfSupply || "";
 
     if (!finalPlaceOfSupply && finalState) {
       finalPlaceOfSupply = finalStateCode
@@ -135,15 +189,6 @@ const generateBill = async (req, res) => {
       placeOfSupplyStateCode ||
       finalStateCode ||
       "";
-
-    // =====================================================
-    // GENERATE UNIQUE BILL NUMBER
-    // =====================================================
-    const count = await Bill.countDocuments();
-
-    const billNumber = `VRAJ-${new Date().getFullYear()}-${String(
-      count + 1
-    ).padStart(3, "0")}`;
 
     // =====================================================
     // CALCULATE ITEMS
@@ -165,10 +210,14 @@ const generateBill = async (req, res) => {
       const gstRate =
         item.gstRate !== undefined &&
         item.gstRate !== null
-          ? Math.max(Number(item.gstRate) || 0, 0)
+          ? Math.max(
+              Number(item.gstRate) || 0,
+              0
+            )
           : 18;
 
-      const taxableAmount = quantity * price;
+      const taxableAmount =
+        quantity * price;
 
       const taxAmount =
         (taxableAmount * gstRate) / 100;
@@ -200,155 +249,258 @@ const generateBill = async (req, res) => {
         price,
         gstRate,
 
-        taxableAmount,
-        taxAmount,
-        totalAmount,
+        taxableAmount: Number(
+          taxableAmount.toFixed(2)
+        ),
+
+        taxAmount: Number(
+          taxAmount.toFixed(2)
+        ),
+
+        totalAmount: Number(
+          totalAmount.toFixed(2)
+        ),
       };
     });
 
     // =====================================================
     // ROUND TOTALS
     // =====================================================
-    subTotal = Number(subTotal.toFixed(2));
-    totalTax = Number(totalTax.toFixed(2));
+    subTotal = Number(
+      subTotal.toFixed(2)
+    );
+
+    totalTax = Number(
+      totalTax.toFixed(2)
+    );
 
     const grandTotal = Number(
       (subTotal + totalTax).toFixed(2)
     );
 
     // =====================================================
-    // CREATE BILL
+    // CREATE BILL WITH DUPLICATE PROTECTION
     // =====================================================
-    const newBill = await Bill.create({
-      billNumber,
 
-      // ===================================================
-      // OLD CUSTOMER FIELDS
-      // ===================================================
-      customerName: finalCustomerName,
-      customerEmail: finalCustomerEmail,
-      customerPhone: finalCustomerPhone,
-      customerGst: finalCustomerGstin,
-      customerGSTIN: finalCustomerGstin,
+    let newBill = null;
+    let lastError = null;
 
-      // ===================================================
-      // CUSTOMER OBJECT
-      // ===================================================
-      customer: {
-        name: finalCustomerName,
-        email: finalCustomerEmail,
-        phone: finalCustomerPhone,
-        gstin: finalCustomerGstin,
+    // Maximum 5 attempts
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        // Every attempt gets a fresh unique number
+        const billNumber =
+          await getNextBillNumber();
 
-        billingAddress: finalBillingAddress,
-        shippingAddress: finalShippingAddress,
+        newBill = await Bill.create({
+          billNumber,
 
-        city: finalCity,
-        state: finalState,
-        stateCode: finalStateCode,
-        pincode: finalPincode,
-      },
+          // ===================================================
+          // OLD CUSTOMER FIELDS
+          // ===================================================
+          customerName:
+            finalCustomerName,
 
-      // ===================================================
-      // FLAT CUSTOMER FIELDS
-      // ===================================================
-      customerAddress: finalBillingAddress,
+          customerEmail:
+            finalCustomerEmail,
 
-      customerBillingAddress:
-        finalBillingAddress,
+          customerPhone:
+            finalCustomerPhone,
 
-      billingAddress:
-        finalBillingAddress,
+          customerGst:
+            finalCustomerGstin,
 
-      customerShippingAddress:
-        finalShippingAddress,
+          customerGSTIN:
+            finalCustomerGstin,
 
-      shippingAddress:
-        finalShippingAddress,
+          // ===================================================
+          // CUSTOMER OBJECT
+          // ===================================================
+          customer: {
+            name:
+              finalCustomerName,
 
-      customerCity:
-        finalCity,
+            email:
+              finalCustomerEmail,
 
-      city:
-        finalCity,
+            phone:
+              finalCustomerPhone,
 
-      customerState:
-        finalState,
+            gstin:
+              finalCustomerGstin,
 
-      state:
-        finalState,
+            billingAddress:
+              finalBillingAddress,
 
-      customerStateCode:
-        finalStateCode,
+            shippingAddress:
+              finalShippingAddress,
 
-      stateCode:
-        finalStateCode,
+            city:
+              finalCity,
 
-      customerPincode:
-        finalPincode,
+            state:
+              finalState,
 
-      pincode:
-        finalPincode,
+            stateCode:
+              finalStateCode,
 
-      // ===================================================
-      // PLACE OF SUPPLY
-      // ===================================================
-      placeOfSupply:
-        finalPlaceOfSupply,
+            pincode:
+              finalPincode,
+          },
 
-      placeOfSupplyState:
-        finalPlaceOfSupplyState,
+          // ===================================================
+          // FLAT CUSTOMER FIELDS
+          // ===================================================
+          customerAddress:
+            finalBillingAddress,
 
-      placeOfSupplyStateCode:
-        finalPlaceOfSupplyStateCode,
+          customerBillingAddress:
+            finalBillingAddress,
 
-      // ===================================================
-      // ITEMS
-      // ===================================================
-      items: formattedItems,
+          billingAddress:
+            finalBillingAddress,
 
-      // ===================================================
-      // TOTALS
-      // ===================================================
-      subTotal,
-      totalTax,
-      grandTotal,
+          customerShippingAddress:
+            finalShippingAddress,
 
-      // ===================================================
-      // SUMMARY
-      // ===================================================
-      summary: {
-        subTotal,
-        totalTax,
-        grandTotal,
+          shippingAddress:
+            finalShippingAddress,
 
-        totalAmountBeforeTax:
+          customerCity:
+            finalCity,
+
+          city:
+            finalCity,
+
+          customerState:
+            finalState,
+
+          state:
+            finalState,
+
+          customerStateCode:
+            finalStateCode,
+
+          stateCode:
+            finalStateCode,
+
+          customerPincode:
+            finalPincode,
+
+          pincode:
+            finalPincode,
+
+          // ===================================================
+          // PLACE OF SUPPLY
+          // ===================================================
+          placeOfSupply:
+            finalPlaceOfSupply,
+
+          placeOfSupplyState:
+            finalPlaceOfSupplyState,
+
+          placeOfSupplyStateCode:
+            finalPlaceOfSupplyStateCode,
+
+          // ===================================================
+          // ITEMS
+          // ===================================================
+          items:
+            formattedItems,
+
+          // ===================================================
+          // TOTALS
+          // ===================================================
           subTotal,
 
-        totalAmountAfterTax:
+          totalTax,
+
           grandTotal,
-      },
 
-      // ===================================================
-      // PAYMENT STATUS
-      // ===================================================
-      paymentStatus:
-        paymentStatus || "Pending",
+          // ===================================================
+          // SUMMARY
+          // ===================================================
+          summary: {
+            subTotal,
 
-      // ===================================================
-      // USER
-      // ===================================================
-      createdBy: req.user._id,
-    });
+            totalTax,
+
+            grandTotal,
+
+            totalAmountBeforeTax:
+              subTotal,
+
+            totalAmountAfterTax:
+              grandTotal,
+          },
+
+          // ===================================================
+          // PAYMENT STATUS
+          // ===================================================
+          paymentStatus:
+            paymentStatus || "Pending",
+
+          // ===================================================
+          // USER
+          // ===================================================
+          createdBy:
+            req.user._id,
+        });
+
+        // Successfully created
+        break;
+      } catch (error) {
+        lastError = error;
+
+        // MongoDB duplicate key error
+        if (
+          error &&
+          error.code === 11000 &&
+          error.keyPattern &&
+          error.keyPattern.billNumber
+        ) {
+          console.log(
+            "Duplicate bill number detected. Retrying..."
+          );
+
+          continue;
+        }
+
+        // Any other error
+        throw error;
+      }
+    }
+
+    // =====================================================
+    // IF BILL STILL NOT CREATED
+    // =====================================================
+    if (!newBill) {
+      console.error(
+        "BILL CREATION FAILED AFTER RETRIES:",
+        lastError
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Unable to generate a unique bill number. Please try again.",
+        error:
+          lastError?.message ||
+          "Unknown error",
+      });
+    }
 
     // =====================================================
     // SUCCESS
     // =====================================================
     return res.status(201).json({
       success: true,
+
       message:
         "Bill generated successfully!",
-      bill: newBill,
+
+      bill:
+        newBill,
     });
   } catch (error) {
     console.error(
@@ -356,10 +508,29 @@ const generateBill = async (req, res) => {
       error
     );
 
+    // =====================================================
+    // DUPLICATE KEY SAFETY
+    // =====================================================
+    if (
+      error &&
+      error.code === 11000
+    ) {
+      return res.status(409).json({
+        success: false,
+
+        message:
+          "Duplicate bill number detected. Please generate the bill again.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
-      message: "Failed to generate bill",
-      error: error.message,
+
+      message:
+        "Failed to generate bill",
+
+      error:
+        error.message,
     });
   }
 };
@@ -376,7 +547,10 @@ const getAllBills = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      count: bills.length,
+
+      count:
+        bills.length,
+
       bills,
     });
   } catch (error) {
@@ -387,8 +561,12 @@ const getAllBills = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch bills",
-      error: error.message,
+
+      message:
+        "Failed to fetch bills",
+
+      error:
+        error.message,
     });
   }
 };
@@ -398,19 +576,23 @@ const getAllBills = async (req, res) => {
 // =====================================================
 const getBillById = async (req, res) => {
   try {
-    const bill = await Bill.findById(
-      req.params.id
-    );
+    const bill =
+      await Bill.findById(
+        req.params.id
+      );
 
     if (!bill) {
       return res.status(404).json({
         success: false,
-        message: "Bill not found",
+
+        message:
+          "Bill not found",
       });
     }
 
     return res.status(200).json({
       success: true,
+
       bill,
     });
   } catch (error) {
@@ -421,8 +603,12 @@ const getBillById = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch bill",
-      error: error.message,
+
+      message:
+        "Failed to fetch bill",
+
+      error:
+        error.message,
     });
   }
 };
@@ -432,21 +618,26 @@ const getBillById = async (req, res) => {
 // =====================================================
 const updateBill = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     // ===================================================
     // FIND BILL
     // ===================================================
-    const bill = await Bill.findById(id);
+    const bill =
+      await Bill.findById(id);
 
     if (!bill) {
       return res.status(404).json({
         success: false,
-        message: "Bill not found",
+
+        message:
+          "Bill not found",
       });
     }
 
-    const data = req.body;
+    const data =
+      req.body;
 
     // ===================================================
     // CUSTOMER DATA
@@ -538,10 +729,14 @@ const updateBill = async (req, res) => {
       bill.placeOfSupply ??
       "";
 
-    if (!finalPlaceOfSupply && finalState) {
-      finalPlaceOfSupply = finalStateCode
-        ? `${finalState} (${finalStateCode})`
-        : finalState;
+    if (
+      !finalPlaceOfSupply &&
+      finalState
+    ) {
+      finalPlaceOfSupply =
+        finalStateCode
+          ? `${finalState} (${finalStateCode})`
+          : finalState;
     }
 
     const finalPlaceOfSupplyState =
@@ -573,10 +768,17 @@ const updateBill = async (req, res) => {
       finalCustomerGstin;
 
     bill.customer = {
-      name: finalCustomerName,
-      email: finalCustomerEmail,
-      phone: finalCustomerPhone,
-      gstin: finalCustomerGstin,
+      name:
+        finalCustomerName,
+
+      email:
+        finalCustomerEmail,
+
+      phone:
+        finalCustomerPhone,
+
+      gstin:
+        finalCustomerGstin,
 
       billingAddress:
         finalBillingAddress,
@@ -584,10 +786,17 @@ const updateBill = async (req, res) => {
       shippingAddress:
         finalShippingAddress,
 
-      city: finalCity,
-      state: finalState,
-      stateCode: finalStateCode,
-      pincode: finalPincode,
+      city:
+        finalCity,
+
+      state:
+        finalState,
+
+      stateCode:
+        finalStateCode,
+
+      pincode:
+        finalPincode,
     };
 
     // ===================================================
@@ -651,9 +860,12 @@ const updateBill = async (req, res) => {
       data.items &&
       Array.isArray(data.items)
     ) {
-      if (data.items.length === 0) {
+      if (
+        data.items.length === 0
+      ) {
         return res.status(400).json({
           success: false,
+
           message:
             "At least one item is required.",
         });
@@ -664,21 +876,30 @@ const updateBill = async (req, res) => {
 
       const formattedItems =
         data.items.map((item) => {
-          const quantity = Math.max(
-            Number(item.quantity) || 0,
-            0
-          );
+          const quantity =
+            Math.max(
+              Number(
+                item.quantity
+              ) || 0,
+              0
+            );
 
-          const price = Math.max(
-            Number(item.price) || 0,
-            0
-          );
+          const price =
+            Math.max(
+              Number(
+                item.price
+              ) || 0,
+              0
+            );
 
           const gstRate =
-            item.gstRate !== undefined &&
+            item.gstRate !==
+              undefined &&
             item.gstRate !== null
               ? Math.max(
-                  Number(item.gstRate) || 0,
+                  Number(
+                    item.gstRate
+                  ) || 0,
                   0
                 )
               : 18;
@@ -687,14 +908,19 @@ const updateBill = async (req, res) => {
             quantity * price;
 
           const taxAmount =
-            (taxableAmount * gstRate) /
+            (taxableAmount *
+              gstRate) /
             100;
 
           const totalAmount =
-            taxableAmount + taxAmount;
+            taxableAmount +
+            taxAmount;
 
-          subTotal += taxableAmount;
-          totalTax += taxAmount;
+          subTotal +=
+            taxableAmount;
+
+          totalTax +=
+            taxAmount;
 
           return {
             productId:
@@ -714,35 +940,50 @@ const updateBill = async (req, res) => {
               "9988",
 
             quantity,
+
             price,
+
             gstRate,
 
             taxableAmount:
               Number(
-                taxableAmount.toFixed(2)
+                taxableAmount.toFixed(
+                  2
+                )
               ),
 
             taxAmount:
               Number(
-                taxAmount.toFixed(2)
+                taxAmount.toFixed(
+                  2
+                )
               ),
 
             totalAmount:
               Number(
-                totalAmount.toFixed(2)
+                totalAmount.toFixed(
+                  2
+                )
               ),
           };
         });
 
       subTotal =
-        Number(subTotal.toFixed(2));
+        Number(
+          subTotal.toFixed(2)
+        );
 
       totalTax =
-        Number(totalTax.toFixed(2));
+        Number(
+          totalTax.toFixed(2)
+        );
 
       const grandTotal =
         Number(
-          (subTotal + totalTax).toFixed(2)
+          (
+            subTotal +
+            totalTax
+          ).toFixed(2)
         );
 
       bill.items =
@@ -759,7 +1000,9 @@ const updateBill = async (req, res) => {
 
       bill.summary = {
         subTotal,
+
         totalTax,
+
         grandTotal,
 
         totalAmountBeforeTax:
@@ -773,7 +1016,9 @@ const updateBill = async (req, res) => {
     // ===================================================
     // PAYMENT STATUS
     // ===================================================
-    if (data.paymentStatus) {
+    if (
+      data.paymentStatus
+    ) {
       bill.paymentStatus =
         data.paymentStatus;
     }
@@ -789,9 +1034,12 @@ const updateBill = async (req, res) => {
     // ===================================================
     return res.status(200).json({
       success: true,
+
       message:
         "Bill updated successfully!",
-      bill: updatedBill,
+
+      bill:
+        updatedBill,
     });
   } catch (error) {
     console.error(
@@ -801,8 +1049,12 @@ const updateBill = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update bill",
-      error: error.message,
+
+      message:
+        "Failed to update bill",
+
+      error:
+        error.message,
     });
   }
 };
@@ -812,20 +1064,26 @@ const updateBill = async (req, res) => {
 // =====================================================
 const deleteBill = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     const bill =
-      await Bill.findByIdAndDelete(id);
+      await Bill.findByIdAndDelete(
+        id
+      );
 
     if (!bill) {
       return res.status(404).json({
         success: false,
-        message: "Bill not found",
+
+        message:
+          "Bill not found",
       });
     }
 
     return res.status(200).json({
       success: true,
+
       message:
         "Bill deleted successfully!",
     });
@@ -837,8 +1095,12 @@ const deleteBill = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to delete bill",
-      error: error.message,
+
+      message:
+        "Failed to delete bill",
+
+      error:
+        error.message,
     });
   }
 };
