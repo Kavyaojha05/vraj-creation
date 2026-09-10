@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import api from "../services/api"; 
 import logoImg from "../assets/logo2.jpeg";
 
 const ResetPassword = () => {
-  const { token } = useParams(); // URL से टोकन मिलेगा
+  const { token } = useParams(); 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,24 +30,16 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      // यहाँ /api/auth/ ਜੋड़ा गया है ताकि 404 एरर न आए
-      const response = await fetch(`http://localhost:5000/api/auth/reset-password/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPassword }),
+      // 👈 Localhost URL ki jagah api.post ka use kiya gaya hai taaki live aur local dono par chale
+      const response = await api.post(`/auth/reset-password/${token}`, {
+        newPassword,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage("Password reset successfully! Redirecting to login...");
-        setTimeout(() => navigate("/login"), 3000);
-      } else {
-        setError(data.message || "Invalid or expired link.");
-      }
+      setMessage(response.data.message || "Password reset successfully! Redirecting to login...");
+      setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
       console.error("RESET PASSWORD ERROR:", err);
-      setError("Server error. Please try again later.");
+      setError(err.response?.data?.message || "Invalid or expired link.");
     } finally {
       setLoading(false);
     }

@@ -120,16 +120,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* RESET PASSWORD */}
+      {/* RESET PASSWORD (FIXED: Direct component render so dashboard redirect doesn't trigger) */}
       <Route
         path="/reset-password/:token"
-        element={
-          user ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <ResetPassword />
-          )
-        }
+        element={<ResetPassword />}
       />
 
       {/* DASHBOARD */}
@@ -142,7 +136,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* CREATE BILL (अब AdminPage के अंदर है ताकि साइडबार और हेडर दिखे) */}
+      {/* CREATE BILL */}
       <Route
         path="/create-bill"
         element={
@@ -152,7 +146,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* INVOICES / BILLS LIST (पाथ /invoices सेट किया गया है ताकि साइडबार से मैच हो) */}
+      {/* INVOICES / BILLS LIST */}
       <Route
         path="/invoices"
         element={
@@ -231,10 +225,16 @@ const AppRoutes = () => {
           </AdminPage>
         }
       />
+
+      {/* EDIT BILL (FIXED: Wrapped with AdminPage for proper layout and sidebar) */}
       <Route
-  path="/edit-bill/:id"
-  element={<EditBill />}
-/>
+        path="/edit-bill/:id"
+        element={
+          <AdminPage>
+            <EditBill />
+          </AdminPage>
+        }
+      />
 
       {/* HOME */}
       <Route
