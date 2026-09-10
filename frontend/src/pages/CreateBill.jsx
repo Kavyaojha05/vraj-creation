@@ -1049,7 +1049,7 @@ const CreateBill = () => {
 
         hsnCode:
           item.hsnCode?.trim() ||
-          "9988",
+          "7326",
 
         quantity:
           Number(item.quantity) || 1,
