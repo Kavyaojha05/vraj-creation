@@ -182,6 +182,9 @@ const calculateGST = (items, customerStateCode) => {
 // =====================================================
 // COMPONENT
 // =====================================================
+// =====================================================
+// COMPONENT
+// =====================================================
 const BillsList = () => {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -344,55 +347,107 @@ const BillsList = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>GST Invoice - ${escapeHtml(invoiceNo)}</title>
         <style>
-          @page { size: A4; margin: 4mm; }
-          * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; background: #ffffff; color: #111111; font-family: Arial, Helvetica, sans-serif; }
-          .invoice { position: relative; width: 100%; max-width: 794px; margin: 0 auto; border: 1.5px solid #222; display: flex; flex-direction: column; background: #ffffff; overflow: hidden; }
-          .watermark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; overflow: hidden; }
-          .watermark img { width: 300px; height: 300px; object-fit: contain; opacity: 0.05; filter: grayscale(100%); }
-          .invoice > *:not(.watermark) { position: relative; z-index: 1; }
-          .seller-header { text-align: center; padding: 8px 10px 6px; border-bottom: 1.2px solid #222; }
-          .seller-header h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; }
-          .seller-header p { margin: 2px 0; font-size: 9.5px; line-height: 1.3; }
-          .invoice-title { text-align: center; font-size: 13px; font-weight: 900; margin-top: 4px; letter-spacing: 0.5px; }
-          .customer-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #222; }
-          .customer-box { padding: 6px 8px; min-height: auto; }
-          .customer-box:first-child { border-right: 1px solid #222; }
-          .box-title { font-weight: 900; font-size: 10.5px; text-transform: uppercase; margin-bottom: 4px; padding-bottom: 2px; border-bottom: 1px solid #777; }
-          .customer-row { margin: 2px 0; font-size: 9.5px; line-height: 1.35; }
-          .address { margin-top: 1px; line-height: 1.3; }
-          .invoice-details { width: 100%; border-collapse: collapse; }
-          .invoice-details td { border: 1px solid #555; padding: 4px 6px; font-size: 9.5px; vertical-align: top; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #555; padding: 3px 4px; font-size: 9px; }
-          th { background: #f1f1f1; font-weight: 900; text-align: center; vertical-align: middle; }
-          .center { text-align: center; }
-          .right { text-align: right; }
-          .items-table { margin-top: 0; table-layout: fixed; }
-          .items-table th:nth-child(1) { width: 28px; }
-          .items-table th:nth-child(2) { width: auto; }
-          .items-table th:nth-child(3) { width: 50px; }
-          .items-table th:nth-child(4) { width: 38px; }
-          .items-table th:nth-child(5) { width: 65px; }
-          .items-table th:nth-child(6) { width: 42px; }
-          .items-table th:nth-child(7) { width: 75px; }
-          .items-table th:nth-child(8) { width: 80px; }
-          .bottom-area { margin-top: auto; }
-          .summary-wrapper { display: grid; grid-template-columns: 1fr 260px; border-top: 1px solid #222; }
-          .words-box { padding: 6px 8px; border-right: 1px solid #222; font-size: 9.5px; line-height: 1.4; }
-          .tax-table td { padding: 3px 5px; font-size: 9px; }
-          .tax-table .total-row td { font-size: 10px; font-weight: 900; border-top: 1.5px solid #222; background: #fafafa; }
-          .bank-terms { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #222; }
-          .bank-box, .terms-box { padding: 6px 8px; }
-          .bank-box { border-right: 1px solid #222; }
-          .section-heading { font-weight: 900; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #777; padding-bottom: 2px; }
-          .bank-row { display: grid; grid-template-columns: 80px 1fr; font-size: 9px; margin: 3px 0; }
-          .terms-box ol { margin: 0; padding-left: 14px; }
-          .terms-box li { font-size: 8px; line-height: 1.3; margin-bottom: 2px; }
-          .signature { padding: 8px 12px 10px; border-top: 1px solid #222; display: flex; align-items: flex-end; justify-content: flex-end; }
-          .signature-line { width: 180px; border-top: 1px solid #222; padding-top: 4px; text-align: center; font-size: 9px; }
-          .footer { text-align: center; border-top: 1px solid #222; padding: 4px; font-size: 8px; }
-          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+@page { 
+  size: A4; 
+  margin: 5mm 20px; 
+}
+* { box-sizing: border-box; }
+html, body { 
+  margin: 0; 
+  padding: 0; 
+  background: #ffffff; 
+  color: #111111; 
+  font-family: Arial, Helvetica, sans-serif; 
+}
+.invoice { 
+  position: relative; 
+  width: 88%; 
+  max-width: 100%; 
+  min-height: 275mm; 
+  margin: 0 auto; 
+  border-left: 1.5px solid #222;   
+  border-right: 1.5px solid #222;  
+  border-top: 1.5px solid #222;
+  border-bottom: 1.5px solid #222;
+  display: flex; 
+  flex-direction: column; 
+  background: #ffffff; 
+  overflow: hidden; 
+}
+.watermark { 
+  position: absolute; 
+  inset: 0; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  pointer-events: none; 
+  z-index: 0; 
+  overflow: hidden; 
+}
+.watermark img { 
+  width: 400px; 
+  height: 400px; 
+  object-fit: contain; 
+  opacity: 0.1; 
+  filter: grayscale(100%); 
+}
+.invoice > *:not(.watermark) { position: relative; z-index: 1; }
+.seller-header { text-align: center; padding: 6px 10px 4px; border-bottom: 1px solid #222; }
+.seller-header h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; }
+.seller-header p { margin: 1px 0; font-size: 9px; line-height: 1.2; }
+.invoice-title { text-align: center; font-size: 11px; font-weight: 900; margin-top: 2px; letter-spacing: 0.5px; }
+.customer-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #222; }
+.customer-box { padding: 4px 6px; min-height: auto; }
+.customer-box:first-child { border-right: 1px solid #222; }
+.box-title, .section-heading { 
+  font-weight: 900; 
+  font-size: 9px; 
+  text-transform: uppercase; 
+  margin-bottom: 2px; 
+  padding-bottom: 1px; 
+  border-bottom: 1px solid #777; 
+  margin-left: -6px;
+  margin-right: -6px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.customer-row { margin: 1px 0; font-size: 9px; line-height: 1.2; }
+.address { margin-top: 1px; line-height: 1.2; }
+.invoice-details { width: 100%; border-collapse: collapse; }
+.invoice-details td { border: 1px solid #555; padding: 3px 5px; font-size: 9px; vertical-align: top; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #555; padding: 2px 4px; font-size: 8.5px; }
+th { background: #f1f1f1; font-weight: 900; text-align: center; vertical-align: middle; }
+.center { text-align: center; }
+.right { text-align: right; }
+.items-table { margin-top: 0; table-layout: fixed; }
+.items-table th:nth-child(1) { width: 28px; }
+.items-table th:nth-child(2) { width: auto; }
+.items-table th:nth-child(3) { width: 67px; }
+.items-table th:nth-child(4) { width: 45px; }
+.items-table th:nth-child(5) { width: 60px; }
+.items-table th:nth-child(6) { width: 48px; }
+.items-table th:nth-child(7) { width: 75px; }
+.items-table th:nth-child(8) { width: 70px; }
+.bottom-area { margin-top: auto; width: 100%; }
+.summary-wrapper { display: grid; grid-template-columns: 1fr 240px; border-top: 1px solid #222; }
+.words-box { padding: 4px 6px; border-right: 1px solid #222; font-size: 9px; line-height: 1.3; }
+.tax-table td { padding: 2px 4px; font-size: 8.5px; }
+.tax-table .total-row td { font-size: 9.5px; font-weight: 900; border-top: 1px solid #222; background: #fafafa; }
+.bank-terms { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #222; }
+.bank-box, .terms-box { padding: 4px 6px; }
+.bank-box { border-right: 1px solid #222; }
+.section-heading { font-weight: 900; font-size: 9px; text-transform: uppercase; margin-bottom: 2px; border-bottom: 1px solid #777; padding-bottom: 1px; }
+.bank-row { display: grid; grid-template-columns: 75px 1fr; font-size: 8.5px; margin: 2px 0; }
+.terms-box ol { margin: 0; padding-left: 12px; }
+.terms-box li { font-size: 7.5px; line-height: 1.2; margin-bottom: 1px; }
+.signature { padding: 6px 8px 8px; border-top: 1px solid #222; display: flex; align-items: flex-end; justify-content: flex-end; }
+.signature-line { width: 160px; border-top: 1px solid #222; padding-top: 3px; text-align: center; font-size: 8.5px; }
+.footer { text-align: center; border-top: 1px solid #222; padding: 2px; font-size: 7.5px; }
+@media print { 
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+  .invoice { min-height: 275mm; }
+}
         </style>
       </head>
       <body>
@@ -525,10 +580,10 @@ const BillsList = () => {
         </script>
       </body>
       </html>
-    `);
+  `);
 
-    printWindow.document.close();
-  };
+  printWindow.document.close();
+};
 
   return (
     <div className="mx-auto max-w-7xl p-4">
@@ -596,7 +651,7 @@ const BillsList = () => {
                       onClick={() => navigate("/create-bill")}
                       className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700"
                     >
-                      Create First Bill
+                      Create FirstBill
                     </button>
                   </td>
                 </tr>
