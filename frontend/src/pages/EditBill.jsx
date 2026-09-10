@@ -465,7 +465,7 @@ const EditBill = () => {
               hsnCode:
                 item.hsnCode ||
                 item.hsn ||
-                "9988",
+                "7326",
 
               quantity:
                 Number(item.quantity) || 1,
@@ -682,7 +682,7 @@ const EditBill = () => {
       selectedProduct.hsnCode ||
       selectedProduct.hsn ||
       selectedProduct.HSN ||
-      "9988";
+      "7326";
 
     const price =
       selectedProduct.price ??
@@ -1015,7 +1015,7 @@ const EditBill = () => {
           productName:
             item.productName.trim(),
           hsnCode:
-            item.hsnCode || "9988",
+            item.hsnCode || "7326",
           quantity:
             Number(item.quantity) || 1,
           price:

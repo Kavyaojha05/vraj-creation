@@ -243,7 +243,7 @@ const generateBill = async (req, res) => {
         hsnCode:
           item.hsnCode ||
           item.hsn ||
-          "9988",
+          "7326",
 
         quantity,
         price,
@@ -937,7 +937,7 @@ const updateBill = async (req, res) => {
             hsnCode:
               item.hsnCode ||
               item.hsn ||
-              "9988",
+              "7326",
 
             quantity,
 

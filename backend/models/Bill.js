@@ -255,7 +255,7 @@ const billSchema = new mongoose.Schema(
         // =================================================
         hsnCode: {
           type: String,
-          default: "9988",
+          default: "7326",
           trim: true,
         },
 
