@@ -15,12 +15,17 @@ const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+
 const productRoutes = require("./routes/productRoutes");
+const publicProductRoutes = require("./routes/publicProductRoutes");
+
 const purchaseRoutes = require("./routes/purchaseRoutes");
 const saleRoutes = require("./routes/saleRoutes");
 const billRoutes = require("./routes/billRoutes");
 
-
+// =====================================================
+// APP
+// =====================================================
 
 const app = express();
 
@@ -105,32 +110,75 @@ app.use(
 // API ROUTES
 // =====================================================
 
-// Authentication (Includes Login, Register, Forgot & Reset Password)
+// =====================================================
+// AUTHENTICATION
+// =====================================================
+
+// Login
+// Register
+// Forgot Password
+// Reset Password
+
 app.use(
   "/api/auth",
   authRoutes
 );
 
-// Users / Admin approval
+// =====================================================
+// USERS / ADMIN
+// =====================================================
+
 app.use(
   "/api/users",
   userRoutes
 );
-app.use("/api/bills", billRoutes);
 
-// Products
+// =====================================================
+// BILLS
+// =====================================================
+
+app.use(
+  "/api/bills",
+  billRoutes
+);
+
+// =====================================================
+// PRODUCTS - ADMIN DASHBOARD
+// =====================================================
+
+// Protected routes
+// Login required
+
 app.use(
   "/api/products",
   productRoutes
 );
 
-// Purchases
+// =====================================================
+// PRODUCTS - PUBLIC WEBSITE
+// =====================================================
+
+// Public routes
+// Login NOT required
+
+app.use(
+  "/api/public/products",
+  publicProductRoutes
+);
+
+// =====================================================
+// PURCHASES
+// =====================================================
+
 app.use(
   "/api/purchases",
   purchaseRoutes
 );
 
-// Sales
+// =====================================================
+// SALES
+// =====================================================
+
 app.use(
   "/api/sales",
   saleRoutes
@@ -146,8 +194,7 @@ app.get(
     res.status(200).json({
       success: true,
       status: "OK",
-      message:
-        "Vraj Creation API is running",
+      message: "Vraj Creation API is running",
     });
   }
 );
@@ -177,6 +224,7 @@ app.use(
       err
     );
 
+    // File/Image too large
     if (
       err.type === "entity.too.large"
     ) {
@@ -189,8 +237,7 @@ app.use(
 
     return res.status(500).json({
       success: false,
-      message:
-        "Internal server error",
+      message: "Internal server error",
       error: err.message,
     });
   }
