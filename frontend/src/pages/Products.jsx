@@ -144,6 +144,10 @@ const Products = () => {
         product.sku
           ?.toLowerCase()
           .includes(searchText) ||
+        product.hsnCode
+          ?.toString()
+          .toLowerCase()
+          .includes(searchText) ||
         product.category
           ?.toLowerCase()
           .includes(searchText) ||
@@ -193,7 +197,6 @@ const Products = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-
         <div className="animate-pulse">
 
           <div className="h-8 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
@@ -218,7 +221,6 @@ const Products = () => {
           </div>
 
         </div>
-
       </div>
     );
   }
@@ -388,7 +390,7 @@ const Products = () => {
 
             <input
               type="text"
-              placeholder="Search name, SKU, size..."
+              placeholder="Search name, SKU, HSN, size..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
@@ -419,6 +421,7 @@ const Products = () => {
                 {item}
               </option>
             ))}
+
           </select>
 
           {/* STOCK */}
@@ -508,7 +511,7 @@ const Products = () => {
 
           <div className="overflow-x-auto">
 
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1200px]">
 
               <thead>
 
@@ -520,6 +523,12 @@ const Products = () => {
 
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
                     SKU
+                  </th>
+
+                  {/* HSN */}
+
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
+                    HSN Code
                   </th>
 
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-400">
@@ -691,6 +700,17 @@ const ProductTableRow = ({
       ? String(product.size).trim()
       : "--";
 
+  // ===================================================
+  // HSN CODE
+  // ===================================================
+
+  const productHSN =
+    product.hsnCode !== undefined &&
+    product.hsnCode !== null &&
+    String(product.hsnCode).trim()
+      ? String(product.hsnCode).trim()
+      : "--";
+
   return (
     <tr className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
 
@@ -749,6 +769,22 @@ const ProductTableRow = ({
 
         <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {product.sku || "-"}
+        </span>
+
+      </td>
+
+      {/* HSN CODE */}
+
+      <td className="px-5 py-4">
+
+        <span
+          className={
+            productHSN === "--"
+              ? "text-sm font-semibold text-slate-400"
+              : "rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-black tracking-wide text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+          }
+        >
+          {productHSN}
         </span>
 
       </td>
