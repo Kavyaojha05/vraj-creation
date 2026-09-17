@@ -118,10 +118,6 @@ connectDB();
 // =====================================================
 // TRUST PROXY
 // =====================================================
-//
-// Required when deployed behind Render / reverse proxy.
-//
-// =====================================================
 
 if (IS_PRODUCTION) {
   app.set(
@@ -147,27 +143,25 @@ app.use(
 );
 
 // =====================================================
-// CORS
+// CORS CONFIGURATION
 // =====================================================
 //
-// IMPORTANT
+// Production frontend:
+// https://vraj-creations.netlify.app
 //
-// Development frontend currently runs on:
-// http://localhost:5174
+// Render Environment Variable:
 //
-// We also keep 5173 because Vite may use either port.
+// FRONTEND_URL=https://vraj-creations.netlify.app
 //
-// Production:
-// Set FRONTEND_URL in .env:
-//
-// FRONTEND_URL=https://your-domain.com
-//
-// Multiple production origins:
+// Multiple frontend URLs can be supplied:
 // FRONTEND_URL=https://domain1.com,https://domain2.com
 //
 // =====================================================
 
-// Production origins from ENV
+// -----------------------------------------------------
+// Environment configured origins
+// -----------------------------------------------------
+
 const configuredOrigins =
   String(
     process.env.FRONTEND_URL || ""
@@ -175,14 +169,16 @@ const configuredOrigins =
     .split(",")
     .map(
       (origin) =>
-        origin.trim().replace(
-          /\/$/,
-          ""
-        )
+        origin
+          .trim()
+          .replace(/\/$/, "")
     )
     .filter(Boolean);
 
+// -----------------------------------------------------
 // Development origins
+// -----------------------------------------------------
+
 const developmentOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -191,25 +187,50 @@ const developmentOrigins = [
   "http://127.0.0.1:5174",
 ];
 
-// =====================================================
-// FINAL ORIGIN LIST
-// =====================================================
+// -----------------------------------------------------
+// Production frontend
+// -----------------------------------------------------
+//
+// Explicitly include the real Netlify dashboard.
+//
+// This prevents login failure if FRONTEND_URL
+// is accidentally missing in Render.
+//
 
-const allowedOrigins =
-  IS_PRODUCTION
-    ? configuredOrigins
-    : [
-        ...configuredOrigins,
-        ...developmentOrigins,
-      ];
+const productionOrigins = [
+  "https://vraj-creations.netlify.app",
+];
 
+// -----------------------------------------------------
+// Final allowed origins
+// -----------------------------------------------------
+
+const allowedOrigins = IS_PRODUCTION
+  ? [
+      ...configuredOrigins,
+      ...productionOrigins,
+    ]
+  : [
+      ...configuredOrigins,
+      ...developmentOrigins,
+      ...productionOrigins,
+    ];
+
+// -----------------------------------------------------
 // Remove duplicates
-const uniqueAllowedOrigins =
-  [
-    ...new Set(
-      allowedOrigins
-    ),
-  ];
+// -----------------------------------------------------
+
+const uniqueAllowedOrigins = [
+  ...new Set(
+    allowedOrigins
+      .map((origin) =>
+        String(origin)
+          .trim()
+          .replace(/\/$/, "")
+      )
+      .filter(Boolean)
+  ),
+];
 
 // =====================================================
 // SHOW CORS CONFIG
@@ -224,101 +245,118 @@ console.log(
 // CORS CONFIGURATION
 // =====================================================
 
-app.use(
-  cors({
-    origin: (
-      origin,
-      callback
-    ) => {
+const corsOptions = {
+  origin: (
+    origin,
+    callback
+  ) => {
 
-      // -------------------------------------------------
-      // Server-to-server / Postman
-      // -------------------------------------------------
+    // -------------------------------------------------
+    // Server-to-server / Postman / health checks
+    // -------------------------------------------------
 
-      if (!origin) {
-        return callback(
-          null,
-          true
-        );
-      }
-
-      // -------------------------------------------------
-      // Normalize origin
-      // -------------------------------------------------
-
-      const normalizedOrigin =
-        String(origin)
-          .trim()
-          .replace(
-            /\/$/,
-            ""
-          );
-
-      // -------------------------------------------------
-      // WHITELIST CHECK
-      // -------------------------------------------------
-
-      if (
-        uniqueAllowedOrigins.includes(
-          normalizedOrigin
-        )
-      ) {
-        return callback(
-          null,
-          true
-        );
-      }
-
-      // -------------------------------------------------
-      // BLOCK UNKNOWN ORIGIN
-      // -------------------------------------------------
-
-      console.warn(
-        "CORS BLOCKED:",
-        normalizedOrigin
-      );
-
+    if (!origin) {
       return callback(
-        new Error(
-          "CORS origin not allowed."
-        )
+        null,
+        true
       );
-    },
+    }
 
-    credentials: true,
+    // -------------------------------------------------
+    // Normalize origin
+    // -------------------------------------------------
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+    const normalizedOrigin =
+      String(origin)
+        .trim()
+        .replace(/\/$/, "");
 
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Internal-Secret",
-    ],
+    // -------------------------------------------------
+    // WHITELIST CHECK
+    // -------------------------------------------------
 
-    exposedHeaders: [
-      "Content-Disposition",
-    ],
+    if (
+      uniqueAllowedOrigins.includes(
+        normalizedOrigin
+      )
+    ) {
+      return callback(
+        null,
+        true
+      );
+    }
 
-    optionsSuccessStatus: 204,
-  })
+    // -------------------------------------------------
+    // BLOCK UNKNOWN ORIGIN
+    // -------------------------------------------------
+
+    console.warn(
+      "CORS BLOCKED:",
+      normalizedOrigin
+    );
+
+    return callback(
+      new Error(
+        "CORS origin not allowed."
+      )
+    );
+  },
+
+  // ---------------------------------------------------
+  // Credentials
+  // ---------------------------------------------------
+
+  credentials: true,
+
+  // ---------------------------------------------------
+  // Methods
+  // ---------------------------------------------------
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  // ---------------------------------------------------
+  // Headers
+  // ---------------------------------------------------
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "X-Internal-Secret",
+  ],
+
+  // ---------------------------------------------------
+  // Exposed headers
+  // ---------------------------------------------------
+
+  exposedHeaders: [
+    "Content-Disposition",
+  ],
+
+  // ---------------------------------------------------
+  // Preflight response
+  // ---------------------------------------------------
+
+  optionsSuccessStatus: 204,
+};
+
+// =====================================================
+// APPLY CORS
+// =====================================================
+
+app.use(
+  cors(corsOptions)
 );
 
 // =====================================================
 // BODY PARSER
-// =====================================================
-//
-// Dashboard JSON APIs normally do not need 15MB.
-//
-// Images should be uploaded through multipart/multer
-// routes where their own limits can be applied.
-//
 // =====================================================
 
 app.use(
@@ -363,12 +401,6 @@ const loginLimiter =
 // =====================================================
 // INTERNAL STOCK RATE LIMIT
 // =====================================================
-//
-// Server-to-server requests only.
-//
-// Internal secret remains the primary protection.
-//
-// =====================================================
 
 const internalStockLimiter =
   rateLimit({
@@ -412,7 +444,6 @@ app.use(
     {
       maxAge: "1d",
 
-      // Prevent directory listing
       index: false,
     }
   )
@@ -461,16 +492,6 @@ app.use(
 // =====================================================
 // INTERNAL STOCK SYNC
 // =====================================================
-//
-// Used ONLY by Vraj Creation public website backend.
-//
-// Authentication:
-// internalStockMiddleware
-//
-// Additional:
-// internalStockLimiter
-//
-// =====================================================
 
 app.use(
   "/api/internal/stock",
@@ -480,10 +501,6 @@ app.use(
 
 // =====================================================
 // INTERNAL PRODUCT VERIFICATION
-// =====================================================
-//
-// Protected by internal middleware inside routes.
-//
 // =====================================================
 
 app.use(
