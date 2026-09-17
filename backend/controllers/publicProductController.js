@@ -10,7 +10,7 @@ const getPublicProducts = async (req, res) => {
       status: "active",
     })
       .select(
-        "_id name sku category subcategory image description size sellingPrice stock status"
+        "_id name sku hsnCode category subcategory image description size sellingPrice stock status"
       )
       .sort({
         createdAt: -1,
@@ -42,7 +42,7 @@ const getPublicProduct = async (req, res) => {
       _id: req.params.id,
       status: "active",
     }).select(
-      "_id name sku category subcategory image description size sellingPrice stock status"
+      "_id name sku hsnCode category subcategory image description size sellingPrice stock status"
     );
 
     if (!product) {

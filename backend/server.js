@@ -1,3 +1,8 @@
+// =====================================================
+// VRAJ CREATION - DASHBOARD BACKEND SERVER
+// SECURE PRODUCTION VERSION
+// =====================================================
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -5,67 +10,327 @@ const path = require("path");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 
+// =====================================================
+// ENVIRONMENT VARIABLES
+// =====================================================
+
 dotenv.config();
 
-const connectDB = require("./config/db");
-
 // =====================================================
-// ROUTES
+// ENVIRONMENT
 // =====================================================
 
-const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
+const NODE_ENV =
+  process.env.NODE_ENV || "development";
 
-const productRoutes = require("./routes/productRoutes");
-const publicProductRoutes = require("./routes/publicProductRoutes");
-
-const purchaseRoutes = require("./routes/purchaseRoutes");
-const saleRoutes = require("./routes/saleRoutes");
-const billRoutes = require("./routes/billRoutes");
+const IS_PRODUCTION =
+  NODE_ENV === "production";
 
 // =====================================================
-// APP
+// SECRET STATUS
 // =====================================================
 
-const app = express();
+console.log(
+  "DASHBOARD_BACKEND_URL:",
+  process.env.DASHBOARD_BACKEND_URL
+    ? "CONFIGURED"
+    : "NOT CONFIGURED"
+);
+
+console.log(
+  "INTERNAL_STOCK_SECRET:",
+  process.env.INTERNAL_STOCK_SECRET
+    ? "LOADED"
+    : "MISSING"
+);
 
 // =====================================================
 // DATABASE
 // =====================================================
 
+const connectDB =
+  require("./config/db");
+
+// =====================================================
+// ROUTES
+// =====================================================
+
+// Authentication
+const authRoutes =
+  require("./routes/authRoutes");
+
+// Users / Admin
+const userRoutes =
+  require("./routes/userRoutes");
+
+// Products
+const productRoutes =
+  require("./routes/productRoutes");
+
+const publicProductRoutes =
+  require("./routes/publicProductRoutes");
+
+// Purchases
+const purchaseRoutes =
+  require("./routes/purchaseRoutes");
+
+// Sales
+const saleRoutes =
+  require("./routes/saleRoutes");
+
+// Other Expenses
+const otherExpenseRoutes =
+  require("./routes/otherExpenseRoutes");
+
+// Bills
+const billRoutes =
+  require("./routes/billRoutes");
+
+// Internal Stock
+const internalStockRoutes =
+  require("./routes/internalStockRoutes");
+
+// Internal Product Verification
+const internalProductRoutes =
+  require("./routes/internalProductRoutes");
+
+// Orders
+const orderRoutes =
+  require("./routes/orderRoutes");
+
+// Order PDF
+const orderPdfRoutes =
+  require("./routes/orderPdfRoutes");
+
+// =====================================================
+// EXPRESS APP
+// =====================================================
+
+const app =
+  express();
+
+// =====================================================
+// DATABASE CONNECTION
+// =====================================================
+
 connectDB();
+
+// =====================================================
+// TRUST PROXY
+// =====================================================
+//
+// Required when deployed behind Render / reverse proxy.
+//
+// =====================================================
+
+if (IS_PRODUCTION) {
+  app.set(
+    "trust proxy",
+    1
+  );
+}
+
+// =====================================================
+// DISABLE EXPRESS FINGERPRINT
+// =====================================================
+
+app.disable(
+  "x-powered-by"
+);
 
 // =====================================================
 // PERFORMANCE
 // =====================================================
 
-app.use(compression());
+app.use(
+  compression()
+);
 
 // =====================================================
 // CORS
 // =====================================================
+//
+// IMPORTANT
+//
+// Development frontend currently runs on:
+// http://localhost:5174
+//
+// We also keep 5173 because Vite may use either port.
+//
+// Production:
+// Set FRONTEND_URL in .env:
+//
+// FRONTEND_URL=https://your-domain.com
+//
+// Multiple production origins:
+// FRONTEND_URL=https://domain1.com,https://domain2.com
+//
+// =====================================================
+
+// Production origins from ENV
+const configuredOrigins =
+  String(
+    process.env.FRONTEND_URL || ""
+  )
+    .split(",")
+    .map(
+      (origin) =>
+        origin.trim().replace(
+          /\/$/,
+          ""
+        )
+    )
+    .filter(Boolean);
+
+// Development origins
+const developmentOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+
+// =====================================================
+// FINAL ORIGIN LIST
+// =====================================================
+
+const allowedOrigins =
+  IS_PRODUCTION
+    ? configuredOrigins
+    : [
+        ...configuredOrigins,
+        ...developmentOrigins,
+      ];
+
+// Remove duplicates
+const uniqueAllowedOrigins =
+  [
+    ...new Set(
+      allowedOrigins
+    ),
+  ];
+
+// =====================================================
+// SHOW CORS CONFIG
+// =====================================================
+
+console.log(
+  "Allowed CORS Origins:",
+  uniqueAllowedOrigins
+);
+
+// =====================================================
+// CORS CONFIGURATION
+// =====================================================
 
 app.use(
   cors({
-    origin: true,
+    origin: (
+      origin,
+      callback
+    ) => {
+
+      // -------------------------------------------------
+      // Server-to-server / Postman
+      // -------------------------------------------------
+
+      if (!origin) {
+        return callback(
+          null,
+          true
+        );
+      }
+
+      // -------------------------------------------------
+      // Normalize origin
+      // -------------------------------------------------
+
+      const normalizedOrigin =
+        String(origin)
+          .trim()
+          .replace(
+            /\/$/,
+            ""
+          );
+
+      // -------------------------------------------------
+      // WHITELIST CHECK
+      // -------------------------------------------------
+
+      if (
+        uniqueAllowedOrigins.includes(
+          normalizedOrigin
+        )
+      ) {
+        return callback(
+          null,
+          true
+        );
+      }
+
+      // -------------------------------------------------
+      // BLOCK UNKNOWN ORIGIN
+      // -------------------------------------------------
+
+      console.warn(
+        "CORS BLOCKED:",
+        normalizedOrigin
+      );
+
+      return callback(
+        new Error(
+          "CORS origin not allowed."
+        )
+      );
+    },
+
     credentials: true,
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Internal-Secret",
+    ],
+
+    exposedHeaders: [
+      "Content-Disposition",
+    ],
+
+    optionsSuccessStatus: 204,
   })
 );
 
 // =====================================================
 // BODY PARSER
 // =====================================================
+//
+// Dashboard JSON APIs normally do not need 15MB.
+//
+// Images should be uploaded through multipart/multer
+// routes where their own limits can be applied.
+//
+// =====================================================
 
 app.use(
   express.json({
-    limit: "15mb",
+    limit: "2mb",
   })
 );
 
 app.use(
   express.urlencoded({
     extended: true,
-    limit: "15mb",
+    limit: "2mb",
   })
 );
 
@@ -73,19 +338,60 @@ app.use(
 // LOGIN RATE LIMIT
 // =====================================================
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+const loginLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
 
-  message: {
-    success: false,
-    message:
-      "Too many login attempts. Please try again after 15 minutes.",
-  },
+    max: 5,
 
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+    message: {
+      success: false,
+
+      message:
+        "Too many login attempts. Please try again after 15 minutes.",
+    },
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    skipSuccessfulRequests:
+      false,
+  });
+
+// =====================================================
+// INTERNAL STOCK RATE LIMIT
+// =====================================================
+//
+// Server-to-server requests only.
+//
+// Internal secret remains the primary protection.
+//
+// =====================================================
+
+const internalStockLimiter =
+  rateLimit({
+    windowMs:
+      1 * 60 * 1000,
+
+    max: 120,
+
+    message: {
+      success: false,
+
+      message:
+        "Too many internal stock requests. Please try again later.",
+    },
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+  });
+
+// =====================================================
+// AUTH LOGIN RATE LIMIT
+// =====================================================
 
 app.use(
   "/api/auth/login",
@@ -93,15 +399,21 @@ app.use(
 );
 
 // =====================================================
-// UPLOADS
+// LOCAL UPLOADS
 // =====================================================
 
 app.use(
   "/uploads",
   express.static(
-    path.join(__dirname, "uploads"),
+    path.join(
+      __dirname,
+      "uploads"
+    ),
     {
       maxAge: "1d",
+
+      // Prevent directory listing
+      index: false,
     }
   )
 );
@@ -113,11 +425,6 @@ app.use(
 // =====================================================
 // AUTHENTICATION
 // =====================================================
-
-// Login
-// Register
-// Forgot Password
-// Reset Password
 
 app.use(
   "/api/auth",
@@ -143,11 +450,59 @@ app.use(
 );
 
 // =====================================================
-// PRODUCTS - ADMIN DASHBOARD
+// ORDERS
 // =====================================================
 
-// Protected routes
-// Login required
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+// =====================================================
+// INTERNAL STOCK SYNC
+// =====================================================
+//
+// Used ONLY by Vraj Creation public website backend.
+//
+// Authentication:
+// internalStockMiddleware
+//
+// Additional:
+// internalStockLimiter
+//
+// =====================================================
+
+app.use(
+  "/api/internal/stock",
+  internalStockLimiter,
+  internalStockRoutes
+);
+
+// =====================================================
+// INTERNAL PRODUCT VERIFICATION
+// =====================================================
+//
+// Protected by internal middleware inside routes.
+//
+// =====================================================
+
+app.use(
+  "/api/internal/products",
+  internalProductRoutes
+);
+
+// =====================================================
+// ORDER PDF
+// =====================================================
+
+app.use(
+  "/api/order-pdf",
+  orderPdfRoutes
+);
+
+// =====================================================
+// PRODUCTS - ADMIN DASHBOARD
+// =====================================================
 
 app.use(
   "/api/products",
@@ -157,9 +512,6 @@ app.use(
 // =====================================================
 // PRODUCTS - PUBLIC WEBSITE
 // =====================================================
-
-// Public routes
-// Login NOT required
 
 app.use(
   "/api/public/products",
@@ -185,60 +537,155 @@ app.use(
 );
 
 // =====================================================
+// OTHER EXPENSES
+// =====================================================
+
+app.use(
+  "/api/other-expenses",
+  otherExpenseRoutes
+);
+
+// =====================================================
 // HEALTH CHECK
 // =====================================================
 
 app.get(
   "/api/health",
   (req, res) => {
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
+
       status: "OK",
-      message: "Vraj Creation API is running",
+
+      message:
+        "Vraj Creation API is running",
     });
   }
 );
 
 // =====================================================
-// 404
+// 404 - API ROUTE NOT FOUND
 // =====================================================
 
 app.use(
   (req, res) => {
-    res.status(404).json({
+    return res.status(404).json({
       success: false,
-      message: "API route not found",
-      path: req.originalUrl,
+
+      message:
+        "API route not found",
     });
   }
 );
 
 // =====================================================
-// ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // =====================================================
 
 app.use(
-  (err, req, res, next) => {
+  (
+    err,
+    req,
+    res,
+    next
+  ) => {
+
     console.error(
       "SERVER ERROR:",
       err
     );
 
-    // File/Image too large
+    // -------------------------------------------------
+    // CORS ERROR
+    // -------------------------------------------------
+
     if (
-      err.type === "entity.too.large"
+      err.message ===
+      "CORS origin not allowed."
     ) {
-      return res.status(413).json({
+      return res.status(403).json({
         success: false,
+
         message:
-          "Image/file is too large. Maximum allowed size is 15MB.",
+          "Origin not allowed.",
       });
     }
 
+    // -------------------------------------------------
+    // BODY TOO LARGE
+    // -------------------------------------------------
+
+    if (
+      err.type ===
+      "entity.too.large"
+    ) {
+      return res.status(413).json({
+        success: false,
+
+        message:
+          "Request payload is too large.",
+      });
+    }
+
+    // -------------------------------------------------
+    // INVALID JSON
+    // -------------------------------------------------
+
+    if (
+      err instanceof
+        SyntaxError &&
+      err.status === 400 &&
+      "body" in err
+    ) {
+      return res.status(400).json({
+        success: false,
+
+        message:
+          "Invalid JSON request.",
+      });
+    }
+
+    // -------------------------------------------------
+    // MULTER ERROR
+    // -------------------------------------------------
+
+    if (
+      err.name ===
+      "MulterError"
+    ) {
+      return res.status(400).json({
+        success: false,
+
+        message:
+          err.message,
+      });
+    }
+
+    // -------------------------------------------------
+    // PRODUCTION ERROR RESPONSE
+    // -------------------------------------------------
+
+    if (IS_PRODUCTION) {
+      return res.status(500).json({
+        success: false,
+
+        message:
+          "Internal server error.",
+      });
+    }
+
+    // -------------------------------------------------
+    // DEVELOPMENT RESPONSE
+    // -------------------------------------------------
+
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message,
+
+      message:
+        "Internal server error.",
+
+      error:
+        err.message,
     });
   }
 );
@@ -248,13 +695,54 @@ app.use(
 // =====================================================
 
 const PORT =
-  process.env.PORT || 5000;
+  process.env.PORT ||
+  5000;
 
 app.listen(
   PORT,
   () => {
+
     console.log(
-      `Server running on port ${PORT}`
+      "====================================================="
+    );
+
+    console.log(
+      `Vraj Creation Backend running on port ${PORT}`
+    );
+
+    console.log(
+      `Environment: ${NODE_ENV}`
+    );
+
+    console.log(
+      `API Base: http://localhost:${PORT}/api`
+    );
+
+    console.log(
+      `Health: http://localhost:${PORT}/api/health`
+    );
+
+    console.log(
+      `Other Expenses: http://localhost:${PORT}/api/other-expenses`
+    );
+
+    console.log(
+      "Internal Stock: /api/internal/stock"
+    );
+
+    console.log(
+      "Internal Product Verification: /api/internal/products/verify"
+    );
+
+    console.log(
+      "Allowed CORS Origins:",
+      uniqueAllowedOrigins.join(
+        ", "
+      )
+    );
+
+    console.log(
+      "====================================================="
     );
   }
 );

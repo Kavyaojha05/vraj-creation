@@ -1,10 +1,36 @@
 const Product = require("../models/Product");
 
 // =====================================================
+// HELPER - VALIDATE HSN CODE
+// =====================================================
+
+const validateHSNCode = (hsnCode) => {
+  // HSN optional hai
+  if (
+    hsnCode === undefined ||
+    hsnCode === null ||
+    String(hsnCode).trim() === ""
+  ) {
+    return true;
+  }
+
+  const cleanHSN = String(hsnCode).trim();
+
+  // HSN sirf 4, 6 ya 8 digits ka hona chahiye
+  return /^\d{4}$|^\d{6}$|^\d{8}$/.test(cleanHSN);
+};
+
+// =====================================================
 // HELPER - CREATE SIZE
 // =====================================================
 
-const createSize = (length, breadth, height, sizeUnit, existingSize = "") => {
+const createSize = (
+  length,
+  breadth,
+  height,
+  sizeUnit,
+  existingSize = ""
+) => {
   const parts = [];
 
   if (
@@ -112,6 +138,7 @@ const createProduct = async (req, res) => {
     const {
       name,
       sku,
+      hsnCode,
       category,
       subcategory,
 
@@ -145,6 +172,27 @@ const createProduct = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Required product fields are missing",
+      });
+    }
+
+    // =================================================
+    // CLEAN HSN CODE
+    // =================================================
+
+    const cleanHSN =
+      hsnCode !== undefined &&
+      hsnCode !== null
+        ? String(hsnCode).trim()
+        : "";
+
+    // =================================================
+    // HSN VALIDATION
+    // =================================================
+
+    if (!validateHSNCode(cleanHSN)) {
+      return res.status(400).json({
+        success: false,
+        message: "HSN Code must contain exactly 4, 6 or 8 digits",
       });
     }
 
@@ -193,7 +241,7 @@ const createProduct = async (req, res) => {
     // CLEAN SKU
     // =================================================
 
-    const cleanSku = sku.trim().toUpperCase();
+    const cleanSku = String(sku).trim().toUpperCase();
 
     // =================================================
     // DUPLICATE SKU
@@ -242,6 +290,9 @@ const createProduct = async (req, res) => {
       name: name.trim(),
 
       sku: cleanSku,
+
+      // HSN CODE
+      hsnCode: cleanHSN,
 
       category: category.trim(),
 
@@ -313,6 +364,7 @@ const updateProduct = async (req, res) => {
     const {
       name,
       sku,
+      hsnCode,
       category,
       subcategory,
 
@@ -333,11 +385,30 @@ const updateProduct = async (req, res) => {
     } = req.body;
 
     // =================================================
+    // HSN CODE
+    // =================================================
+
+    if (hsnCode !== undefined) {
+      const cleanHSN = String(hsnCode).trim();
+
+      if (!validateHSNCode(cleanHSN)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "HSN Code must contain exactly 4, 6 or 8 digits",
+        });
+      }
+
+      // Empty HSN allowed so admin can remove HSN
+      product.hsnCode = cleanHSN;
+    }
+
+    // =================================================
     // SKU
     // =================================================
 
     if (sku) {
-      const cleanSku = sku.trim().toUpperCase();
+      const cleanSku = String(sku).trim().toUpperCase();
 
       if (cleanSku !== product.sku) {
         const skuExists = await Product.findOne({

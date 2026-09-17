@@ -16,6 +16,17 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // =====================================================
+    // HSN CODE
+    // =====================================================
+
+    hsnCode: {
+      type: String,
+      default: "",
+      trim: true,
+      match: [/^\d{0}$|^\d{4}$|^\d{6}$|^\d{8}$/, "HSN Code must be 4, 6 or 8 digits."],
+    },
+
     category: {
       type: String,
       required: true,
@@ -38,10 +49,11 @@ const productSchema = new mongoose.Schema(
     },
 
     size: {
-    type: String,
-    default: "",
-    trim: true,
-  },
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     purchasePrice: {
       type: Number,
       required: true,
