@@ -1,4 +1,7 @@
-const Product = require("../models/Product");
+const mongoose = require("mongoose");
+
+const { getProductDB } = require("../config/productDb");
+const { getProductModel } = require("../models/Product");
 
 // =====================================================
 // GET ALL PUBLIC PRODUCTS
@@ -6,9 +9,19 @@ const Product = require("../models/Product");
 
 const getPublicProducts = async (req, res) => {
   try {
-    const products = await Product.find({
-      status: "active",
-    })
+    const productDB = getProductDB();
+    const Product = getProductModel(productDB);
+
+    console.log("=================================");
+    console.log("PRODUCT DB NAME:", productDB.name);
+    console.log("PRODUCT DB HOST:", productDB.host);
+    console.log("PRODUCT COLLECTION:", Product.collection.name);
+
+    const totalProducts = await Product.countDocuments();
+
+    console.log("TOTAL PRODUCTS:", totalProducts);
+
+    const products = await Product.find()
       .select(
         "_id name sku hsnCode category subcategory image description size sellingPrice stock status"
       )
@@ -16,10 +29,17 @@ const getPublicProducts = async (req, res) => {
         createdAt: -1,
       });
 
+    console.log("PRODUCTS FOUND:", products.length);
+
     res.json({
       success: true,
       count: products.length,
       products,
+      debug: {
+        database: productDB.name,
+        collection: Product.collection.name,
+        totalProducts,
+      },
     });
   } catch (error) {
     console.error("GET PUBLIC PRODUCTS ERROR:", error);
@@ -38,9 +58,11 @@ const getPublicProducts = async (req, res) => {
 
 const getPublicProduct = async (req, res) => {
   try {
+    const productDB = getProductDB();
+    const Product = getProductModel(productDB);
+
     const product = await Product.findOne({
       _id: req.params.id,
-      status: "active",
     }).select(
       "_id name sku hsnCode category subcategory image description size sellingPrice stock status"
     );

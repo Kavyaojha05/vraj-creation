@@ -50,6 +50,10 @@ console.log(
 
 const connectDB =
   require("./config/db");
+  
+  const {
+  connectProductDB,
+} = require("./config/productDb");
 
 // =====================================================
 // ROUTES
@@ -114,6 +118,7 @@ const app =
 // =====================================================
 
 connectDB();
+connectProductDB();
 
 // =====================================================
 // TRUST PROXY

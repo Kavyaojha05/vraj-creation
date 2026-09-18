@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 
+// =====================================================
+// PRODUCT SCHEMA
+// =====================================================
+
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -16,15 +20,14 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // =====================================================
-    // HSN CODE
-    // =====================================================
-
     hsnCode: {
       type: String,
       default: "",
       trim: true,
-      match: [/^\d{0}$|^\d{4}$|^\d{6}$|^\d{8}$/, "HSN Code must be 4, 6 or 8 digits."],
+      match: [
+        /^\d{0}$|^\d{4}$|^\d{6}$|^\d{8}$/,
+        "HSN Code must be 4, 6 or 8 digits.",
+      ],
     },
 
     category: {
@@ -97,4 +100,23 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+// =====================================================
+// GET PRODUCT MODEL FOR SPECIFIC CONNECTION
+// =====================================================
+
+const getProductModel = (connection) => {
+  if (connection.models.Product) {
+    return connection.models.Product;
+  }
+
+  return connection.model("Product", productSchema, "products");
+};
+
+// =====================================================
+// EXPORT
+// =====================================================
+
+module.exports = {
+  productSchema,
+  getProductModel,
+};
