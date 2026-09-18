@@ -1,9 +1,18 @@
 import axios from "axios";
 
+// =====================================================
+// API BASE URL
+// =====================================================
+
 const API_BASE_URL =
-  window.location.hostname === "localhost"
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === "localhost"
     ? "http://localhost:5000/api"
-    : "https://vraj-creation.onrender.com/api";
+    : "https://vraj-creation.onrender.com/api");
+
+// =====================================================
+// AXIOS INSTANCE
+// =====================================================
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -23,21 +32,16 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    /*
-     * IMPORTANT:
-     * FormData ke liye Content-Type manually set mat karo.
-     *
-     * Browser/Axios automatically:
-     * multipart/form-data; boundary=...
-     * set karega.
-     */
+    // =================================================
+    // FORMDATA
+    // =================================================
 
     if (config.data instanceof FormData) {
-      // Agar kahin default Content-Type laga hua ho
-      // to usko remove kar do.
+      // Browser/Axios khud multipart boundary set karega
       delete config.headers["Content-Type"];
     } else {
-      // Normal JSON requests
+      // Normal JSON request
+      config.headers = config.headers || {};
       config.headers["Content-Type"] = "application/json";
     }
 

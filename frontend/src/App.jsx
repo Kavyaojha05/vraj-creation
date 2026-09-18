@@ -8,19 +8,25 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import ProductView from "./pages/ProductView";
+
 import SalesPage from "./pages/SalesPage";
 import PurchasesPage from "./pages/PurchasesPage";
+import OtherExpenses from "./pages/OtherExpenses";
+
 import AdminApprovals from "./pages/AdminApprovals";
+
 import CreateBill from "./pages/CreateBill";
 import BillsList from "./pages/BillsList";
 import EditBill from "./pages/EditBill";
 
 import AdminLayout from "./components/AdminLayout";
+
 import {
   AuthProvider,
   useAuth,
@@ -37,10 +43,13 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="text-center">
+
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950 dark:border-slate-700 dark:border-t-white" />
+
           <p className="mt-4 text-sm font-bold text-slate-500 dark:text-slate-400">
             Loading...
           </p>
+
         </div>
       </div>
     );
@@ -66,9 +75,11 @@ const AdminPage = ({ children }) => {
   return (
     <ProtectedRoute>
       <AdminLayout>
+
         <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
           {children}
         </div>
+
       </AdminLayout>
     </ProtectedRoute>
   );
@@ -84,49 +95,75 @@ const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* LOGIN */}
+      {/* =================================================
+          LOGIN
+      ================================================= */}
+
       <Route
         path="/login"
         element={
           user ? (
-            <Navigate to="/dashboard" replace />
+            <Navigate
+              to="/dashboard"
+              replace
+            />
           ) : (
             <Login />
           )
         }
       />
 
-      {/* REGISTER */}
+      {/* =================================================
+          REGISTER
+      ================================================= */}
+
       <Route
         path="/register"
         element={
           user ? (
-            <Navigate to="/dashboard" replace />
+            <Navigate
+              to="/dashboard"
+              replace
+            />
           ) : (
             <Register />
           )
         }
       />
 
-      {/* FORGOT PASSWORD */}
+      {/* =================================================
+          FORGOT PASSWORD
+      ================================================= */}
+
       <Route
         path="/forgot-password"
         element={
           user ? (
-            <Navigate to="/dashboard" replace />
+            <Navigate
+              to="/dashboard"
+              replace
+            />
           ) : (
             <ForgotPassword />
           )
         }
       />
 
-      {/* RESET PASSWORD (FIXED: Direct component render so dashboard redirect doesn't trigger) */}
+      {/* =================================================
+          RESET PASSWORD
+      ================================================= */}
+
       <Route
         path="/reset-password/:token"
-        element={<ResetPassword />}
+        element={
+          <ResetPassword />
+        }
       />
 
-      {/* DASHBOARD */}
+      {/* =================================================
+          DASHBOARD
+      ================================================= */}
+
       <Route
         path="/dashboard"
         element={
@@ -136,7 +173,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* CREATE BILL */}
+      {/* =================================================
+          CREATE BILL
+      ================================================= */}
+
       <Route
         path="/create-bill"
         element={
@@ -146,7 +186,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* INVOICES / BILLS LIST */}
+      {/* =================================================
+          INVOICES / BILLS LIST
+      ================================================= */}
+
       <Route
         path="/invoices"
         element={
@@ -156,7 +199,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* PRODUCTS */}
+      {/* =================================================
+          PRODUCTS
+      ================================================= */}
+
       <Route
         path="/products"
         element={
@@ -166,7 +212,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ADD PRODUCT */}
+      {/* =================================================
+          ADD PRODUCT
+      ================================================= */}
+
       <Route
         path="/products/add"
         element={
@@ -176,7 +225,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* PRODUCT VIEW */}
+      {/* =================================================
+          PRODUCT VIEW
+      ================================================= */}
+
       <Route
         path="/products/:id"
         element={
@@ -186,7 +238,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* EDIT PRODUCT */}
+      {/* =================================================
+          EDIT PRODUCT
+      ================================================= */}
+
       <Route
         path="/products/edit/:id"
         element={
@@ -196,7 +251,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* SALES */}
+      {/* =================================================
+          SALES
+      ================================================= */}
+
       <Route
         path="/sales"
         element={
@@ -206,7 +264,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* PURCHASES */}
+      {/* =================================================
+          PURCHASES
+      ================================================= */}
+
       <Route
         path="/purchases"
         element={
@@ -216,7 +277,23 @@ const AppRoutes = () => {
         }
       />
 
-      {/* ADMIN APPROVALS */}
+      {/* =================================================
+          OTHER EXPENSES
+      ================================================= */}
+
+      <Route
+        path="/other-expenses"
+        element={
+          <AdminPage>
+            <OtherExpenses />
+          </AdminPage>
+        }
+      />
+
+      {/* =================================================
+          ADMIN APPROVALS
+      ================================================= */}
+
       <Route
         path="/admin/approvals"
         element={
@@ -226,7 +303,10 @@ const AppRoutes = () => {
         }
       />
 
-      {/* EDIT BILL (FIXED: Wrapped with AdminPage for proper layout and sidebar) */}
+      {/* =================================================
+          EDIT BILL
+      ================================================= */}
+
       <Route
         path="/edit-bill/:id"
         element={
@@ -236,23 +316,37 @@ const AppRoutes = () => {
         }
       />
 
-      {/* HOME */}
+      {/* =================================================
+          HOME
+      ================================================= */}
+
       <Route
         path="/"
         element={
           <Navigate
-            to={user ? "/dashboard" : "/login"}
+            to={
+              user
+                ? "/dashboard"
+                : "/login"
+            }
             replace
           />
         }
       />
 
-      {/* 404 */}
+      {/* =================================================
+          404
+      ================================================= */}
+
       <Route
         path="*"
         element={
           <Navigate
-            to={user ? "/dashboard" : "/login"}
+            to={
+              user
+                ? "/dashboard"
+                : "/login"
+            }
             replace
           />
         }
