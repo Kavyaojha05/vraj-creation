@@ -44,14 +44,26 @@ console.log(
     : "MISSING"
 );
 
+console.log(
+  "PRODUCT_MONGO_URI:",
+  process.env.PRODUCT_MONGO_URI
+    ? "LOADED"
+    : "MISSING"
+);
+
 // =====================================================
 // DATABASE
 // =====================================================
 
+// Main database
+// Database: vraj_creation_store
 const connectDB =
   require("./config/db");
-  
-  const {
+
+// Product database
+// Database: vraj_creation
+// Collection: products
+const {
   connectProductDB,
 } = require("./config/productDb");
 
@@ -71,6 +83,7 @@ const userRoutes =
 const productRoutes =
   require("./routes/productRoutes");
 
+// Public Products
 const publicProductRoutes =
   require("./routes/publicProductRoutes");
 
@@ -117,7 +130,12 @@ const app =
 // DATABASE CONNECTION
 // =====================================================
 
+// Main database
+// vraj_creation_store
 connectDB();
+
+// Product database
+// vraj_creation
 connectProductDB();
 
 // =====================================================
@@ -150,18 +168,6 @@ app.use(
 // =====================================================
 // CORS CONFIGURATION
 // =====================================================
-//
-// Production frontend:
-// https://vraj-creations.netlify.app
-//
-// Render Environment Variable:
-//
-// FRONTEND_URL=https://vraj-creations.netlify.app
-//
-// Multiple frontend URLs can be supplied:
-// FRONTEND_URL=https://domain1.com,https://domain2.com
-//
-// =====================================================
 
 // -----------------------------------------------------
 // Environment configured origins
@@ -193,17 +199,15 @@ const developmentOrigins = [
 ];
 
 // -----------------------------------------------------
-// Production frontend
+// Production frontend origins
 // -----------------------------------------------------
-//
-// Explicitly include the real Netlify dashboard.
-//
-// This prevents login failure if FRONTEND_URL
-// is accidentally missing in Render.
-//
 
 const productionOrigins = [
+  // Netlify Frontend
   "https://vraj-creations.netlify.app",
+
+  // Vercel Frontend
+  "https://vraj-creation-india-six.vercel.app",
 ];
 
 // -----------------------------------------------------
@@ -247,7 +251,7 @@ console.log(
 );
 
 // =====================================================
-// CORS CONFIGURATION
+// CORS OPTIONS
 // =====================================================
 
 const corsOptions = {
@@ -335,6 +339,7 @@ const corsOptions = {
     "Authorization",
     "X-Requested-With",
     "X-Internal-Secret",
+    "Accept",
   ],
 
   // ---------------------------------------------------
@@ -535,6 +540,10 @@ app.use(
 // PRODUCTS - PUBLIC WEBSITE
 // =====================================================
 
+// Public website products come from:
+// Database: vraj_creation
+// Collection: products
+
 app.use(
   "/api/public/products",
   publicProductRoutes
@@ -581,6 +590,11 @@ app.get(
 
       message:
         "Vraj Creation API is running",
+
+      productDatabase:
+        process.env.PRODUCT_MONGO_URI
+          ? "CONFIGURED"
+          : "MISSING",
     });
   }
 );
@@ -754,6 +768,10 @@ app.listen(
 
     console.log(
       "Internal Product Verification: /api/internal/products/verify"
+    );
+
+    console.log(
+      "Public Products: /api/public/products"
     );
 
     console.log(
